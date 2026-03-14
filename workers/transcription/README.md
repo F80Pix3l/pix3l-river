@@ -33,10 +33,23 @@ npm run dev
 
 ## Deployment (Railway)
 
-1. Create a new Railway project
-2. Add environment variables from `.env`
-3. Deploy from this directory
-4. Worker will auto-start on deployment
+**Required environment variables:**
+
+| Variable | Description |
+|---|---|
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_SERVICE_KEY` | Supabase service role key (bypasses RLS) |
+| `UPSTASH_REDIS_URL` | Upstash Redis connection URL (`rediss://...`) |
+| `REPLICATE_API_TOKEN` | Replicate API token for Whisper |
+
+**Steps:**
+
+1. Create a new Railway service
+2. Set all environment variables in Railway dashboard
+3. Run `railway up` from this directory
+4. Worker starts automatically on deploy (`npm start` in `railway.json`)
+
+See [docs/DEPLOYMENT.md](../../docs/DEPLOYMENT.md) for the full deployment guide.
 
 ## Infrastructure Dependencies
 
