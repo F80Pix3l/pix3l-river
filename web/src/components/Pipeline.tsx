@@ -60,8 +60,18 @@ export function Pipeline() {
               log = [errorMessage];
             }
 
+            // Detect stale running jobs (no completion after 10 minutes)
+            const STALE_TIMEOUT_MS = 10 * 60 * 1000;
+            const isStale = d.status === 'running' && d.started_at &&
+              Date.now() - new Date(d.started_at).getTime() > STALE_TIMEOUT_MS;
+
+            if (isStale && !errorMessage) {
+              errorMessage = 'Worker timed out after 10 minutes. The job may have crashed.';
+              log = [errorMessage];
+            }
+
             // Treat 'done' with progress=0 and error as 'failed' (legacy workers)
-            const status = d.status === 'failed' || (d.status === 'done' && d.progress === 0 && errorMessage)
+            const status = isStale || d.status === 'failed' || (d.status === 'done' && d.progress === 0 && errorMessage)
               ? 'failed'
               : d.status;
 

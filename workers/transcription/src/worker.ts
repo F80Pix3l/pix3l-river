@@ -222,6 +222,53 @@ async function pollForNewVideos() {
 setInterval(pollForNewVideos, 10_000);
 pollForNewVideos(); // Run immediately on startup
 
+// Mark any pipeline_status rows that have been 'running' for over 10 minutes as failed
+async function sweepStaleJobs() {
+  const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  try {
+    const { data: stale, error } = await supabase
+      .from('pipeline_status')
+      .select('job_id, agent_id')
+      .eq('status', 'running')
+      .lt('started_at', cutoff);
+
+    if (error) {
+      console.error('Stale job sweep error:', error.message);
+      return;
+    }
+
+    if (!stale || stale.length === 0) return;
+
+    console.log(`Found ${stale.length} stale pipeline job(s), marking as failed`);
+
+    for (const row of stale) {
+      await supabase
+        .from('pipeline_status')
+        .update({
+          status: 'failed',
+          log: { error: 'Worker timed out after 10 minutes. The job may have crashed.' },
+          completed_at: new Date().toISOString(),
+        })
+        .eq('job_id', row.job_id)
+        .eq('agent_id', row.agent_id);
+
+      // Set the video to failed if it is still in processing state
+      await supabase
+        .from('videos')
+        .update({ status: 'failed' })
+        .eq('id', row.job_id)
+        .eq('status', 'processing');
+
+      console.log(`Stale job marked failed: video ${row.job_id} agent ${row.agent_id}`);
+    }
+  } catch (err) {
+    console.error('Stale job sweep threw:', err);
+  }
+}
+
+setInterval(sweepStaleJobs, 5 * 60 * 1000);
+sweepStaleJobs();
+
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('Shutting down worker...');
