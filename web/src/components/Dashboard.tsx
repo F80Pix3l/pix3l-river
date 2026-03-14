@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { VideoUpload } from './VideoUpload';
@@ -22,6 +22,7 @@ const statusConfig: Record<Video['status'], { label: string; bg: string; border:
 
 export function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -78,7 +79,7 @@ export function Dashboard() {
           </p>
         </div>
 
-        <VideoUpload onUploadComplete={fetchVideos} />
+        <VideoUpload onUploadComplete={(videoId) => navigate(`/pipeline/${videoId}`)} />
 
         {/* Videos list */}
         <div className="mt-14">

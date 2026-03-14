@@ -13,7 +13,7 @@ const platformConfig: Record<Platform, { label: string; color: string; activeBg:
   instagram: { label: 'Instagram', color: '#FF1673', activeBg: 'rgba(255,22,115,0.08)', activeBorder: 'rgba(255,22,115,0.35)' },
 };
 
-export function VideoUpload({ onUploadComplete }: { onUploadComplete?: () => void }) {
+export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId: string) => void }) {
   const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -55,12 +55,12 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: () => voi
       });
       if (uploadError) throw uploadError;
 
-      const { error: dbError } = await supabase.from('videos').insert({
+      const { data: videoRow, error: dbError } = await supabase.from('videos').insert({
         user_id: user.id,
         title: file.name.replace(/\.[^/.]+$/, ''),
         status: 'uploaded',
         storage_path: fileName,
-      }).select().single();
+      }).select('id').single();
       if (dbError) throw dbError;
 
       await supabase.functions.invoke('enqueue-transcription', {
@@ -68,7 +68,7 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: () => voi
       }).catch(() => {});
 
       setProgress(100);
-      onUploadComplete?.();
+      onUploadComplete?.(videoRow.id);
       setTimeout(() => {
         setUploading(false);
         setProgress(0);
