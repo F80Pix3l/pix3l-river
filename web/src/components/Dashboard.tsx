@@ -10,6 +10,7 @@ interface Video {
   title: string;
   status: 'uploaded' | 'processing' | 'completed' | 'failed';
   created_at: string;
+  storage_path: string;
 }
 
 const statusConfig: Record<Video['status'], { label: string; bg: string; border: string; color: string }> = {
@@ -23,6 +24,8 @@ export function Dashboard() {
   const { user } = useAuth();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) fetchVideos();
@@ -32,7 +35,7 @@ export function Dashboard() {
     try {
       const { data, error } = await supabase
         .from('videos')
-        .select('id, title, status, created_at')
+        .select('id, title, status, created_at, storage_path')
         .order('created_at', { ascending: false });
       if (error) throw error;
       setVideos(data || []);
@@ -40,6 +43,25 @@ export function Dashboard() {
       console.error('Error fetching videos:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteVideo = async (video: Video) => {
+    setDeletingId(video.id);
+    try {
+      // Delete storage file first
+      if (video.storage_path) {
+        await supabase.storage.from('videos').remove([video.storage_path]);
+      }
+      // Delete DB row — cascades to pipeline_status, transcripts, generated_content
+      const { error } = await supabase.from('videos').delete().eq('id', video.id);
+      if (error) throw error;
+      setVideos((prev) => prev.filter((v) => v.id !== video.id));
+    } catch (err) {
+      console.error('Delete failed:', err);
+    } finally {
+      setDeletingId(null);
+      setConfirmDeleteId(null);
     }
   };
 
@@ -99,13 +121,16 @@ export function Dashboard() {
               <ul className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
                 {videos.map((video) => {
                   const cfg = statusConfig[video.status];
+                  const isConfirming = confirmDeleteId === video.id;
+                  const isDeleting = deletingId === video.id;
+
                   return (
                     <li
                       key={video.id}
-                      className="px-5 py-4 flex items-center justify-between transition-colors duration-150"
-                      style={{ background: 'transparent' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                      className="group px-5 py-4 flex items-center justify-between transition-colors duration-150"
+                      style={{ background: isConfirming ? 'rgba(255,22,53,0.04)' : 'transparent' }}
+                      onMouseEnter={(e) => { if (!isConfirming) e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+                      onMouseLeave={(e) => { if (!isConfirming) e.currentTarget.style.background = 'transparent'; }}
                     >
                       <div className="min-w-0 flex-1">
                         <h4 className="text-sm font-space font-semibold text-white truncate mb-0.5">
@@ -154,6 +179,51 @@ export function Dashboard() {
                           >
                             Review →
                           </Link>
+                        )}
+
+                        {/* Delete controls */}
+                        {isConfirming ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-white/50 mr-1" style={{ fontFamily: '"Inter", sans-serif' }}>
+                              Delete?
+                            </span>
+                            <button
+                              onClick={() => deleteVideo(video)}
+                              disabled={isDeleting}
+                              className="px-3 py-1.5 text-xs font-space font-semibold text-white rounded-lg transition-all duration-150 disabled:opacity-50"
+                              style={{ background: '#FF1635' }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = '#e01030')}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = '#FF1635')}
+                            >
+                              {isDeleting ? 'Deleting...' : 'Yes, delete'}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              disabled={isDeleting}
+                              className="px-3 py-1.5 text-xs font-space font-semibold rounded-lg transition-all duration-150"
+                              style={{ color: 'rgba(255,255,255,0.50)', border: '1px solid rgba(255,255,255,0.10)' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.50)'; e.currentTarget.style.background = 'transparent'; }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDeleteId(video.id)}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150 opacity-0 group-hover:opacity-100"
+                            style={{ color: 'rgba(255,255,255,0.25)' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = '#FF1635'; e.currentTarget.style.background = 'rgba(255,22,53,0.08)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.25)'; e.currentTarget.style.background = 'transparent'; }}
+                            title="Delete video"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                              <path d="M10 11v6M14 11v6" />
+                              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                            </svg>
+                          </button>
                         )}
                       </div>
                     </li>
