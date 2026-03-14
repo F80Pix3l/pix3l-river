@@ -63,10 +63,6 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
       }).select('id').single();
       if (dbError) throw dbError;
 
-      await supabase.functions.invoke('enqueue-transcription', {
-        body: { videoId: videoRow.id, storagePath: fileName },
-      }).catch(() => {});
-
       setProgress(100);
       onUploadComplete?.(videoRow.id);
       setTimeout(() => {
