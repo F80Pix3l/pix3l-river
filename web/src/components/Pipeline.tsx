@@ -5,9 +5,10 @@ import { Layout } from './Layout';
 
 interface AgentStatus {
   agentId: number;
-  status: 'pending' | 'running' | 'done';
+  status: 'pending' | 'running' | 'done' | 'failed';
   progress: number;
   log: string[];
+  errorMessage?: string;
 }
 
 const AGENTS = [
@@ -47,12 +48,33 @@ export function Pipeline() {
         if (data && data.length > 0) {
           const updated = initial.map((s) => {
             const d = data.find((x: any) => x.agent_id === s.agentId);
-            return d ? { ...s, status: d.status, progress: d.progress || 0, log: d.log || [] } : s;
+            if (!d) return s;
+
+            // Normalize log: handle object { error: message } or array of strings
+            let log: string[] = [];
+            let errorMessage: string | undefined;
+            if (Array.isArray(d.log)) {
+              log = d.log;
+            } else if (d.log && typeof d.log === 'object' && 'error' in d.log) {
+              errorMessage = String(d.log.error);
+              log = [errorMessage];
+            }
+
+            // Treat 'done' with progress=0 and error as 'failed' (legacy workers)
+            const status = d.status === 'failed' || (d.status === 'done' && d.progress === 0 && errorMessage)
+              ? 'failed'
+              : d.status;
+
+            return { ...s, status, progress: d.progress || 0, log, errorMessage };
           });
           setAgentStatuses(updated);
 
           const running = updated.find((s) => s.status === 'running');
           if (running) setActiveAgentId(running.agentId);
+          else {
+            const failed = updated.find((s) => s.status === 'failed');
+            if (failed) setActiveAgentId(failed.agentId);
+          }
 
           const doneCount = updated.filter((s) => s.status === 'done').length;
           setAllDone(doneCount >= 2);
@@ -74,6 +96,7 @@ export function Pipeline() {
 
   const completedCount = agentStatuses.filter((s) => s.status === 'done').length;
   const runningAgent = agentStatuses.find((s) => s.status === 'running');
+  const failedAgent = agentStatuses.find((s) => s.status === 'failed');
 
   if (loading) {
     return (
@@ -164,6 +187,7 @@ export function Pipeline() {
                   const isActive = activeAgentId === agent.id;
                   const isRunning = status?.status === 'running';
                   const isDone = status?.status === 'done';
+                  const isFailed = status?.status === 'failed';
 
                   return (
                     <li
@@ -171,7 +195,9 @@ export function Pipeline() {
                       onClick={() => setActiveAgentId(agent.id)}
                       className="px-4 py-3 cursor-pointer transition-all duration-150 flex items-center gap-3"
                       style={{
-                        background: isActive ? 'rgba(255,22,53,0.06)' : 'transparent',
+                        background: isActive
+                          ? isFailed ? 'rgba(255,22,53,0.08)' : 'rgba(255,22,53,0.06)'
+                          : 'transparent',
                         borderLeft: isActive ? '2px solid #FF1635' : '2px solid transparent',
                       }}
                       onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
@@ -185,19 +211,21 @@ export function Pipeline() {
                             ? 'rgba(133,153,255,0.12)'
                             : isRunning
                             ? 'rgba(255,22,53,0.15)'
+                            : isFailed
+                            ? 'rgba(255,22,53,0.20)'
                             : 'rgba(255,255,255,0.04)',
-                          color: isDone ? '#8599FF' : isRunning ? '#FF1635' : 'rgba(255,255,255,0.25)',
+                          color: isDone ? '#8599FF' : isRunning ? '#FF1635' : isFailed ? '#FF1635' : 'rgba(255,255,255,0.25)',
                         }}
                       >
                         {isDone ? '✓' : isRunning ? (
                           <span className="w-1.5 h-1.5 rounded-full bg-big-red" style={{ animation: 'pulse 1s infinite' }} />
-                        ) : agent.id}
+                        ) : isFailed ? '✕' : agent.id}
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <p
                           className="text-sm font-medium truncate"
-                          style={{ color: isDone ? 'rgba(255,255,255,0.7)' : isRunning ? '#fff' : 'rgba(255,255,255,0.40)', fontFamily: '"Inter", sans-serif' }}
+                          style={{ color: isDone ? 'rgba(255,255,255,0.7)' : isRunning ? '#fff' : isFailed ? '#FF1635' : 'rgba(255,255,255,0.40)', fontFamily: '"Inter", sans-serif' }}
                         >
                           {agent.name}
                         </p>
@@ -209,6 +237,14 @@ export function Pipeline() {
                           style={{ background: 'rgba(255,22,53,0.15)', color: '#FF1635', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px' }}
                         >
                           LIVE
+                        </div>
+                      )}
+                      {isFailed && (
+                        <div
+                          className="text-xs px-1.5 py-0.5 rounded"
+                          style={{ background: 'rgba(255,22,53,0.15)', color: '#FF1635', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px' }}
+                        >
+                          ERR
                         </div>
                       )}
                     </li>
@@ -247,6 +283,14 @@ export function Pipeline() {
                           DONE
                         </span>
                       )}
+                      {activeStatus?.status === 'failed' && (
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full"
+                          style={{ background: 'rgba(255,22,53,0.15)', color: '#FF1635', fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.08em' }}
+                        >
+                          FAILED
+                        </span>
+                      )}
                     </div>
                     <p className="text-white/45 text-sm">{activeAgent.description}</p>
                   </div>
@@ -280,13 +324,20 @@ export function Pipeline() {
                         >
                           Activity Log
                         </p>
-                        {activeStatus.log.length > 0 ? (
+                        {activeStatus.status === 'failed' && activeStatus.errorMessage ? (
+                          <div
+                            className="rounded-lg p-4"
+                            style={{ background: 'rgba(255,22,53,0.06)', border: '1px solid rgba(255,22,53,0.2)' }}
+                          >
+                            <p className="text-xs text-big-red font-mono leading-relaxed">{activeStatus.errorMessage}</p>
+                          </div>
+                        ) : activeStatus.log.length > 0 ? (
                           <div
                             className="rounded-lg p-4 max-h-80 overflow-y-auto"
                             style={{ background: 'rgba(0,6,35,0.6)', border: '1px solid rgba(255,255,255,0.05)' }}
                           >
                             <ul className="space-y-1.5">
-                              {(Array.isArray(activeStatus.log) ? activeStatus.log : []).map((entry: string, i: number) => (
+                              {activeStatus.log.map((entry: string, i: number) => (
                                 <li key={i} className="text-xs text-white/60 font-mono">{entry}</li>
                               ))}
                             </ul>
@@ -325,6 +376,30 @@ export function Pipeline() {
                 {AGENTS.find((a) => a.id === runningAgent.agentId)?.name}
               </span>{' '}
               is running
+            </p>
+          </div>
+        )}
+
+        {/* Failed agent callout */}
+        {failedAgent && !runningAgent && (
+          <div
+            className="mt-6 px-5 py-4 rounded-card flex items-center gap-4"
+            style={{
+              background: 'rgba(255,22,53,0.06)',
+              border: '1px solid rgba(255,22,53,0.25)',
+            }}
+          >
+            <svg className="w-4 h-4 text-big-red flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm text-white/70">
+              <span className="text-big-red font-semibold">
+                {AGENTS.find((a) => a.id === failedAgent.agentId)?.name}
+              </span>{' '}
+              failed.{' '}
+              {failedAgent.errorMessage && (
+                <span className="text-white/45">{failedAgent.errorMessage}</span>
+              )}
             </p>
           </div>
         )}

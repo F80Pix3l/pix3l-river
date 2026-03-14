@@ -60,6 +60,7 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
         title: file.name.replace(/\.[^/.]+$/, ''),
         status: 'uploaded',
         storage_path: fileName,
+        platforms: selectedPlatforms,
       }).select('id').single();
       if (dbError) throw dbError;
 

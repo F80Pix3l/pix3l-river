@@ -50,13 +50,21 @@ export function Dashboard() {
   const deleteVideo = async (video: Video) => {
     setDeletingId(video.id);
     try {
-      // Delete storage file first
+      // Delete DB row first — cascades to pipeline_status, transcripts, generated_content
+      const { error } = await supabase.from('videos').delete().eq('id', video.id);
+      if (error) throw error;
+
+      // Remove video file from storage
       if (video.storage_path) {
         await supabase.storage.from('videos').remove([video.storage_path]);
       }
-      // Delete DB row — cascades to pipeline_status, transcripts, generated_content
-      const { error } = await supabase.from('videos').delete().eq('id', video.id);
-      if (error) throw error;
+
+      // Remove thumbnail files (thumbnails/{videoId}/{platform}.jpg)
+      const thumbnailPaths = ['youtube', 'tiktok', 'instagram'].map(
+        (p) => `thumbnails/${video.id}/${p}.jpg`
+      );
+      await supabase.storage.from('videos').remove(thumbnailPaths);
+
       setVideos((prev) => prev.filter((v) => v.id !== video.id));
     } catch (err) {
       console.error('Delete failed:', err);

@@ -19,6 +19,7 @@ const replicate = new Replicate({
 
 interface CopywritingJobData {
   videoId: string;
+  platforms?: string[];
 }
 
 interface GeneratedCopy {
@@ -133,10 +134,10 @@ async function generateAndUploadThumbnail(
       return null;
     }
 
-    // Signed URL valid for 10 years
+    // Signed URL valid for 1 year
     const { data: signedUrlData } = await supabase.storage
       .from('videos')
-      .createSignedUrl(storagePath, 315360000);
+      .createSignedUrl(storagePath, 31536000);
 
     return signedUrlData?.signedUrl ?? null;
   } catch (err) {
@@ -146,7 +147,7 @@ async function generateAndUploadThumbnail(
 }
 
 async function processCopywriting(job: Job<CopywritingJobData>) {
-  const { videoId } = job.data;
+  const { videoId, platforms: selectedPlatforms = ['youtube', 'tiktok', 'instagram'] } = job.data;
 
   console.log(`[${job.id}] Starting copywriting for video ${videoId}`);
 
@@ -200,8 +201,8 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
       throw new Error(`Failed to parse Claude response as JSON: ${rawContent.text.slice(0, 200)}`);
     }
 
-    // Build platform content array
-    const platforms: Array<{
+    // Build platform content array, filtered to selected platforms
+    const allPlatforms: Array<{
       platform: 'youtube' | 'tiktok' | 'instagram';
       title: string;
       description: string;
@@ -226,6 +227,7 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
         hashtags: copy.instagram.hashtags,
       },
     ];
+    const platforms = allPlatforms.filter((p) => selectedPlatforms.includes(p.platform));
 
     // Save text content for all platforms
     for (const content of platforms) {
@@ -277,7 +279,7 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
       (r) => r.status === 'fulfilled' && r.value.thumbnailUrl
     ).length;
 
-    console.log(`[${job.id}] ${thumbnailsSaved}/3 thumbnails generated`);
+    console.log(`[${job.id}] ${thumbnailsSaved}/${platforms.length} thumbnails generated`);
 
     // Update pipeline status to done
     await supabase
@@ -298,14 +300,14 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
 
     console.log(`[${job.id}] Copywriting completed for video ${videoId}`);
 
-    return { success: true, platforms: ['youtube', 'tiktok', 'instagram'], thumbnailsSaved };
+    return { success: true, platforms: selectedPlatforms, thumbnailsSaved };
   } catch (error) {
     console.error(`[${job.id}] Copywriting failed:`, error);
 
     await supabase
       .from('pipeline_status')
       .update({
-        status: 'done',
+        status: 'failed',
         progress: 0,
         log: { error: error instanceof Error ? error.message : String(error) },
         completed_at: new Date().toISOString(),

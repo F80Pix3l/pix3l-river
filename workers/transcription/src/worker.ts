@@ -24,6 +24,7 @@ const replicate = new Replicate({
 interface TranscriptionJobData {
   videoId: string;
   storagePath: string;
+  platforms?: string[];
 }
 
 async function processTranscription(job: Job<TranscriptionJobData>) {
@@ -116,7 +117,7 @@ async function processTranscription(job: Job<TranscriptionJobData>) {
     // Trigger copywriting agent
     await copywritingQueue.add(
       'generate-copy',
-      { videoId },
+      { videoId, platforms: job.data.platforms ?? ['youtube', 'tiktok', 'instagram'] },
       {
         attempts: 3,
         backoff: { type: 'exponential', delay: 5000 },
@@ -130,11 +131,11 @@ async function processTranscription(job: Job<TranscriptionJobData>) {
   } catch (error) {
     console.error(`[${job.id}] Transcription failed:`, error);
 
-    // Update pipeline status to done with error
+    // Update pipeline status to failed
     await supabase
       .from('pipeline_status')
       .update({
-        status: 'done',
+        status: 'failed',
         progress: 0,
         log: { error: error instanceof Error ? error.message : String(error) },
         completed_at: new Date().toISOString(),
@@ -177,7 +178,7 @@ async function pollForNewVideos() {
   try {
     const { data: videos, error } = await supabase
       .from('videos')
-      .select('id, storage_path')
+      .select('id, storage_path, platforms')
       .eq('status', 'uploaded');
 
     if (error) {
@@ -203,7 +204,7 @@ async function pollForNewVideos() {
       console.log(`New video detected: ${video.id}, enqueuing transcription...`);
       await transcriptionQueue.add(
         'transcribe-video',
-        { videoId: video.id, storagePath: video.storage_path },
+        { videoId: video.id, storagePath: video.storage_path, platforms: video.platforms ?? ['youtube', 'tiktok', 'instagram'] },
         {
           attempts: 3,
           backoff: { type: 'exponential', delay: 5000 },

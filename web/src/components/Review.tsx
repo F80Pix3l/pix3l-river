@@ -281,21 +281,45 @@ export function Review() {
                   >
                     Hashtags
                   </label>
-                  <div className="flex flex-wrap gap-2">
-                    {activeContent.hashtags.length > 0 ? (
-                      activeContent.hashtags.map((tag, i) => (
-                        <span
-                          key={i}
-                          className="px-3 py-1 rounded-full text-xs"
-                          style={{ background: 'rgba(133,153,255,0.10)', border: '1px solid rgba(133,153,255,0.2)', color: '#8599FF', fontFamily: '"JetBrains Mono", monospace' }}
-                        >
-                          #{tag}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-white/25 text-sm">No hashtags generated</span>
-                    )}
-                  </div>
+                  {isEditing ? (
+                    <div>
+                      <input
+                        type="text"
+                        value={activeContent.hashtags.join(' ')}
+                        onChange={(e) => {
+                          const tags = e.target.value
+                            .split(/[\s,]+/)
+                            .map((t) => t.replace(/^#/, '').trim())
+                            .filter((t) => t.length > 0);
+                          setContentByPlatform((p) => ({ ...p, [activePlatform]: { ...p[activePlatform], hashtags: tags } }));
+                        }}
+                        className="w-full px-4 py-2.5 rounded-lg text-white text-sm focus:outline-none transition-colors duration-200"
+                        style={inputStyle}
+                        placeholder="tag1 tag2 tag3"
+                        onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(255,22,115,0.5)')}
+                        onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)')}
+                      />
+                      <p className="text-white/25 text-xs mt-1.5" style={{ fontFamily: '"JetBrains Mono", monospace' }}>
+                        Space or comma separated, # optional
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {activeContent.hashtags.length > 0 ? (
+                        activeContent.hashtags.map((tag, i) => (
+                          <span
+                            key={i}
+                            className="px-3 py-1 rounded-full text-xs"
+                            style={{ background: 'rgba(133,153,255,0.10)', border: '1px solid rgba(133,153,255,0.2)', color: '#8599FF', fontFamily: '"JetBrains Mono", monospace' }}
+                          >
+                            #{tag}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-white/25 text-sm">No hashtags generated</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -390,7 +414,7 @@ export function Review() {
                       onMouseEnter={(e) => { if (activeContent.status !== 'approved') e.currentTarget.style.background = '#e01030'; }}
                       onMouseLeave={(e) => { if (activeContent.status !== 'approved') e.currentTarget.style.background = '#FF1635'; }}
                     >
-                      {activeContent.status === 'approved' ? 'Approved ✓' : 'Approve & Schedule'}
+                      {activeContent.status === 'approved' ? 'Approved ✓' : 'Approve'}
                     </button>
                     <button
                       onClick={() => setIsEditing(true)}
