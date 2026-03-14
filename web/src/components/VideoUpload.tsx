@@ -13,7 +13,7 @@ const platformConfig: Record<Platform, { label: string; color: string; activeBg:
   instagram: { label: 'Instagram', color: '#FF1673', activeBg: 'rgba(255,22,115,0.08)', activeBorder: 'rgba(255,22,115,0.35)' },
 };
 
-export function VideoUpload() {
+export function VideoUpload({ onUploadComplete }: { onUploadComplete?: () => void }) {
   const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -68,6 +68,7 @@ export function VideoUpload() {
       }).catch(() => {});
 
       setProgress(100);
+      onUploadComplete?.();
       setTimeout(() => {
         setUploading(false);
         setProgress(0);

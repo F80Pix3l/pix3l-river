@@ -78,7 +78,7 @@ export function Dashboard() {
           </p>
         </div>
 
-        <VideoUpload />
+        <VideoUpload onUploadComplete={fetchVideos} />
 
         {/* Videos list */}
         <div className="mt-14">
