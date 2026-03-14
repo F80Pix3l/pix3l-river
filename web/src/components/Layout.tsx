@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface LayoutProps {
@@ -31,20 +31,30 @@ const ReviewIcon = () => (
   </svg>
 );
 
-const navItems = [
-  { id: 'upload', label: 'Upload', href: '/upload', icon: <UploadIcon /> },
-  { id: 'pipeline', label: 'Pipeline', href: null, icon: <PipelineIcon /> },
-  { id: 'review', label: 'Review', href: null, icon: <ReviewIcon /> },
+const BASE_NAV = [
+  { id: 'upload', label: 'Upload', icon: <UploadIcon /> },
+  { id: 'pipeline', label: 'Pipeline', icon: <PipelineIcon /> },
+  { id: 'review', label: 'Review', icon: <ReviewIcon /> },
 ];
 
 export function Layout({ children, pageTitle }: LayoutProps) {
   const { user, signOut } = useAuth();
   const location = useLocation();
+  const params = useParams<{ jobId?: string }>();
+  const jobId = params.jobId;
+
   const activeId = location.pathname.startsWith('/pipeline')
     ? 'pipeline'
     : location.pathname.startsWith('/review')
     ? 'review'
     : 'upload';
+
+  const navItems = BASE_NAV.map((item) => {
+    if (item.id === 'upload') return { ...item, href: '/upload', disabled: false };
+    if (item.id === 'pipeline') return { ...item, href: jobId ? `/pipeline/${jobId}` : null, disabled: !jobId };
+    if (item.id === 'review') return { ...item, href: jobId ? `/review/${jobId}` : null, disabled: !jobId };
+    return { ...item, href: null, disabled: true };
+  });
 
   const initials = user?.email?.[0].toUpperCase() || 'U';
 
@@ -88,17 +98,19 @@ export function Layout({ children, pageTitle }: LayoutProps) {
           <ul className="space-y-1">
             {navItems.map((item) => {
               const isActive = activeId === item.id;
+              const isDisabled = item.disabled && !isActive;
               const content = (
                 <span
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200"
                   style={{
-                    color: isActive ? '#fff' : 'rgba(255,255,255,0.50)',
+                    color: isDisabled ? 'rgba(255,255,255,0.20)' : isActive ? '#fff' : 'rgba(255,255,255,0.50)',
                     background: isActive ? 'rgba(255,22,53,0.08)' : 'transparent',
                     borderLeft: isActive ? '2px solid #FF1635' : '2px solid transparent',
                     fontFamily: '"Inter", sans-serif',
+                    cursor: isDisabled ? 'default' : 'pointer',
                   }}
                 >
-                  <span style={{ color: isActive ? '#FF1635' : 'rgba(255,255,255,0.40)' }}>
+                  <span style={{ color: isDisabled ? 'rgba(255,255,255,0.15)' : isActive ? '#FF1635' : 'rgba(255,255,255,0.40)' }}>
                     {item.icon}
                   </span>
                   {item.label}
@@ -107,7 +119,7 @@ export function Layout({ children, pageTitle }: LayoutProps) {
 
               return (
                 <li key={item.id}>
-                  {item.href ? (
+                  {item.href && !isDisabled ? (
                     <Link to={item.href} className="block hover:opacity-90">
                       {content}
                     </Link>
