@@ -1,7 +1,13 @@
-import { Worker, Job } from 'bullmq';
+import { Worker, Job, Queue } from 'bullmq';
 import { createClient } from '@supabase/supabase-js';
 import Replicate from 'replicate';
 import 'dotenv/config';
+
+const copywritingQueue = new Queue('copywriting', {
+  connection: {
+    url: process.env.UPSTASH_REDIS_URL,
+  },
+});
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -104,7 +110,18 @@ async function processTranscription(job: Job<TranscriptionJobData>) {
 
     console.log(`[${job.id}] Transcription completed: ${wordCount} words`);
 
-    // TODO: Trigger copywriting agent job on success
+    // Trigger copywriting agent
+    await copywritingQueue.add(
+      'generate-copy',
+      { videoId },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: { count: 100 },
+        removeOnFail: { count: 500 },
+      }
+    );
+    console.log(`[${job.id}] Enqueued copywriting job for video ${videoId}`);
 
     return { success: true, wordCount };
   } catch (error) {
