@@ -194,7 +194,8 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
 
     let copy: GeneratedCopy;
     try {
-      copy = JSON.parse(rawContent.text) as GeneratedCopy;
+      const jsonText = rawContent.text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+      copy = JSON.parse(jsonText) as GeneratedCopy;
     } catch {
       throw new Error(`Failed to parse Claude response as JSON: ${rawContent.text.slice(0, 200)}`);
     }
