@@ -68,19 +68,40 @@ export function VideoUpload() {
       if (uploadError) throw uploadError;
 
       // Create database entry
-      const { error: dbError } = await supabase.from('videos').insert({
-        user_id: user.id,
-        title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
-        status: 'uploaded',
-        storage_path: fileName,
-      });
+      const { data: videoData, error: dbError } = await supabase
+        .from('videos')
+        .insert({
+          user_id: user.id,
+          title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
+          status: 'uploaded',
+          storage_path: fileName,
+        })
+        .select()
+        .single();
 
       if (dbError) throw dbError;
+
+      // Enqueue transcription job
+      const { error: functionError } = await supabase.functions.invoke(
+        'enqueue-transcription',
+        {
+          body: {
+            videoId: videoData.id,
+            storagePath: fileName,
+          },
+        }
+      );
+
+      if (functionError) {
+        console.error('Failed to enqueue transcription:', functionError);
+        // Don't throw - video was uploaded successfully
+      }
 
       setProgress(100);
       setTimeout(() => {
         setUploading(false);
         setProgress(0);
+        setSelectedFile(null);
       }, 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
