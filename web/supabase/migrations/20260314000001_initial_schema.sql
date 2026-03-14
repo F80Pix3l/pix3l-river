@@ -26,7 +26,7 @@ CREATE POLICY "Users can update own profile"
 
 -- Create videos table
 CREATE TABLE public.videos (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
   title TEXT NOT NULL,
   status TEXT CHECK (status IN ('uploaded', 'processing', 'completed', 'failed')) DEFAULT 'uploaded' NOT NULL,

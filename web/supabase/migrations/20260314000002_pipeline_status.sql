@@ -1,6 +1,6 @@
 -- Create pipeline_status table for tracking agent progress
 CREATE TABLE public.pipeline_status (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   job_id UUID REFERENCES public.videos(id) ON DELETE CASCADE NOT NULL,
   agent_id INTEGER NOT NULL CHECK (agent_id BETWEEN 1 AND 8),
   status TEXT CHECK (status IN ('pending', 'running', 'done')) DEFAULT 'pending' NOT NULL,

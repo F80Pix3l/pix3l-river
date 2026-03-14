@@ -1,13 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Layout } from './Layout';
-
-interface Agent {
-  id: number;
-  name: string;
-  description: string;
-}
 
 interface AgentStatus {
   agentId: number;
@@ -16,15 +10,15 @@ interface AgentStatus {
   log: string[];
 }
 
-const AGENTS: Agent[] = [
-  { id: 1, name: 'Transcription', description: 'Converts video audio to text using AI transcription' },
-  { id: 2, name: 'Copywriting', description: 'Generates engaging captions and descriptions for each clip' },
-  { id: 3, name: 'Brand Voice', description: 'Ensures content matches your brand tone and messaging' },
-  { id: 4, name: 'Clip Selection', description: 'Identifies the best moments for short-form content' },
-  { id: 5, name: 'Thumbnail', description: 'Creates eye-catching thumbnails for maximum engagement' },
-  { id: 6, name: 'Scheduling', description: 'Determines optimal posting times across platforms' },
-  { id: 7, name: 'Publishing', description: 'Distributes content to YouTube, TikTok, and Instagram' },
-  { id: 8, name: 'Feedback', description: 'Analyzes performance and provides optimization insights' },
+const AGENTS = [
+  { id: 1, name: 'Transcription', description: 'Converts audio to text using Whisper AI' },
+  { id: 2, name: 'Copywriting', description: 'Generates platform-specific captions and descriptions' },
+  { id: 3, name: 'Brand Voice', description: 'Aligns content with your brand tone' },
+  { id: 4, name: 'Clip Selection', description: 'Identifies top moments for short-form content' },
+  { id: 5, name: 'Thumbnail', description: 'Creates thumbnails for maximum engagement' },
+  { id: 6, name: 'Scheduling', description: 'Determines optimal posting times' },
+  { id: 7, name: 'Publishing', description: 'Distributes to YouTube, TikTok, and Instagram' },
+  { id: 8, name: 'Feedback', description: 'Analyzes performance and optimizes future content' },
 ];
 
 export function Pipeline() {
@@ -32,49 +26,36 @@ export function Pipeline() {
   const [agentStatuses, setAgentStatuses] = useState<AgentStatus[]>([]);
   const [activeAgentId, setActiveAgentId] = useState<number>(1);
   const [loading, setLoading] = useState(true);
+  const [allDone, setAllDone] = useState(false);
 
   useEffect(() => {
     if (!jobId) return;
 
-    // Initialize agent statuses
-    const initialStatuses: AgentStatus[] = AGENTS.map((agent) => ({
-      agentId: agent.id,
-      status: 'pending',
-      progress: 0,
-      log: [],
+    const initial: AgentStatus[] = AGENTS.map((a) => ({
+      agentId: a.id, status: 'pending', progress: 0, log: [],
     }));
-    setAgentStatuses(initialStatuses);
+    setAgentStatuses(initial);
 
-    // Fetch job status from Supabase
-    const fetchJobStatus = async () => {
+    const fetchStatus = async () => {
       try {
         const { data, error } = await supabase
           .from('pipeline_status')
           .select('*')
           .eq('job_id', jobId);
-
         if (error) throw error;
 
         if (data && data.length > 0) {
-          const updatedStatuses = initialStatuses.map((status) => {
-            const agentData = data.find((d: any) => d.agent_id === status.agentId);
-            if (agentData) {
-              return {
-                ...status,
-                status: agentData.status,
-                progress: agentData.progress || 0,
-                log: agentData.log || [],
-              };
-            }
-            return status;
+          const updated = initial.map((s) => {
+            const d = data.find((x: any) => x.agent_id === s.agentId);
+            return d ? { ...s, status: d.status, progress: d.progress || 0, log: d.log || [] } : s;
           });
-          setAgentStatuses(updatedStatuses);
+          setAgentStatuses(updated);
 
-          // Set active agent to the first running or pending agent
-          const runningAgent = updatedStatuses.find((s) => s.status === 'running');
-          if (runningAgent) {
-            setActiveAgentId(runningAgent.agentId);
-          }
+          const running = updated.find((s) => s.status === 'running');
+          if (running) setActiveAgentId(running.agentId);
+
+          const doneCount = updated.filter((s) => s.status === 'done').length;
+          setAllDone(doneCount >= 2);
         }
       } catch (err) {
         console.error('Error fetching pipeline status:', err);
@@ -83,93 +64,151 @@ export function Pipeline() {
       }
     };
 
-    fetchJobStatus();
-
-    // Poll for updates every 2 seconds
-    const interval = setInterval(fetchJobStatus, 2000);
-
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 2000);
     return () => clearInterval(interval);
   }, [jobId]);
-
-  const getStatusBadge = (status: AgentStatus['status']) => {
-    switch (status) {
-      case 'done':
-        return <span className="px-2 py-1 text-xs font-medium rounded bg-vista-blue/20 text-vista-blue">Done</span>;
-      case 'running':
-        return (
-          <span className="px-2 py-1 text-xs font-medium rounded bg-big-red/20 text-big-red flex items-center gap-1">
-            <span className="animate-pulse">●</span> Running
-          </span>
-        );
-      case 'pending':
-        return <span className="px-2 py-1 text-xs font-medium rounded bg-muted-slate/20 text-muted-slate">Pending</span>;
-    }
-  };
 
   const activeAgent = AGENTS.find((a) => a.id === activeAgentId);
   const activeStatus = agentStatuses.find((s) => s.agentId === activeAgentId);
 
+  const completedCount = agentStatuses.filter((s) => s.status === 'done').length;
+  const runningAgent = agentStatuses.find((s) => s.status === 'running');
+
   if (loading) {
     return (
-      <Layout pageTitle="Pipeline Status">
-        <div className="flex items-center justify-center h-full">
-          <div className="text-white text-xl">Loading pipeline status...</div>
+      <Layout pageTitle="Pipeline">
+        <div className="flex items-center justify-center h-64 gap-3 text-white/40 text-sm">
+          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          Loading pipeline...
         </div>
       </Layout>
     );
   }
 
   return (
-    <Layout pageTitle="Pipeline Status">
-      <div className="p-6">
-        <div className="mb-6">
-          <p className="text-white/55 text-sm font-mono">Job ID: {jobId}</p>
+    <Layout pageTitle="Pipeline">
+      <div className="p-8 max-w-5xl">
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <p
+              className="text-white/35 text-xs uppercase mb-1"
+              style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.10em' }}
+            >
+              Job ID
+            </p>
+            <p className="text-white/55 text-sm font-mono">{jobId}</p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p
+                className="text-white/35 text-xs uppercase mb-1"
+                style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.10em' }}
+              >
+                Progress
+              </p>
+              <p className="text-white font-space font-bold text-lg">
+                {completedCount}<span className="text-white/35 font-normal text-sm"> / {AGENTS.length}</span>
+              </p>
+            </div>
+            {allDone && (
+              <Link
+                to={`/review/${jobId}`}
+                className="px-4 py-2 text-sm font-space font-semibold text-white rounded-lg transition-all duration-200"
+                style={{ background: '#FF1635', boxShadow: '0 4px 16px rgba(255,22,53,0.3)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#e01030')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = '#FF1635')}
+              >
+                Review Content →
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* Overall progress bar */}
+        <div className="mb-8">
+          <div className="w-full h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+            <div
+              className="h-1 rounded-full transition-all duration-500"
+              style={{
+                width: `${(completedCount / AGENTS.length) * 100}%`,
+                background: 'linear-gradient(90deg, #FF1635, #A100FF)',
+              }}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Agent List */}
+          {/* Agent list */}
           <div className="lg:col-span-1">
-            <div className="bg-dark-navy rounded-lg border border-white/6 overflow-hidden">
-              <div className="p-4 border-b border-white/6">
-                <h2 className="font-semibold text-white">AI Agents</h2>
+            <div
+              className="rounded-card overflow-hidden"
+              style={{ border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,9,71,0.3)' }}
+            >
+              <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <p
+                  className="text-white/40 text-xs uppercase"
+                  style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.10em' }}
+                >
+                  Agents
+                </p>
               </div>
-              <ul className="divide-y divide-white/6">
+              <ul className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
                 {AGENTS.map((agent) => {
                   const status = agentStatuses.find((s) => s.agentId === agent.id);
-                  const isRunning = status?.status === 'running';
                   const isActive = activeAgentId === agent.id;
+                  const isRunning = status?.status === 'running';
+                  const isDone = status?.status === 'done';
 
                   return (
                     <li
                       key={agent.id}
                       onClick={() => setActiveAgentId(agent.id)}
-                      className={`p-4 cursor-pointer transition-all ${
-                        isActive ? 'bg-vista-blue/10' : 'hover:bg-white/5'
-                      } ${isRunning ? 'border-l-4 border-big-red bg-big-red/5' : ''}`}
+                      className="px-4 py-3 cursor-pointer transition-all duration-150 flex items-center gap-3"
+                      style={{
+                        background: isActive ? 'rgba(255,22,53,0.06)' : 'transparent',
+                        borderLeft: isActive ? '2px solid #FF1635' : '2px solid transparent',
+                      }}
+                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm ${
-                              isRunning
-                                ? 'bg-big-red/20 text-big-red'
-                                : status?.status === 'done'
-                                ? 'bg-vista-blue/20 text-vista-blue'
-                                : 'bg-muted-slate/20 text-muted-slate'
-                            }`}
-                          >
-                            {agent.id}
-                          </div>
-                          <div>
-                            <div className="font-medium text-white">{agent.name}</div>
-                          </div>
-                        </div>
-                        {status && getStatusBadge(status.status)}
+                      {/* Status indicator */}
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold font-space"
+                        style={{
+                          background: isDone
+                            ? 'rgba(133,153,255,0.12)'
+                            : isRunning
+                            ? 'rgba(255,22,53,0.15)'
+                            : 'rgba(255,255,255,0.04)',
+                          color: isDone ? '#8599FF' : isRunning ? '#FF1635' : 'rgba(255,255,255,0.25)',
+                        }}
+                      >
+                        {isDone ? '✓' : isRunning ? (
+                          <span className="w-1.5 h-1.5 rounded-full bg-big-red" style={{ animation: 'pulse 1s infinite' }} />
+                        ) : agent.id}
                       </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-sm font-medium truncate"
+                          style={{ color: isDone ? 'rgba(255,255,255,0.7)' : isRunning ? '#fff' : 'rgba(255,255,255,0.40)', fontFamily: '"Inter", sans-serif' }}
+                        >
+                          {agent.name}
+                        </p>
+                      </div>
+
                       {isRunning && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <div className="w-2 h-2 bg-big-red rounded-full animate-pulse" />
-                          <span className="text-xs text-big-red">Processing...</span>
+                        <div
+                          className="text-xs px-1.5 py-0.5 rounded"
+                          style={{ background: 'rgba(255,22,53,0.15)', color: '#FF1635', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px' }}
+                        >
+                          LIVE
                         </div>
                       )}
                     </li>
@@ -179,46 +218,87 @@ export function Pipeline() {
             </div>
           </div>
 
-          {/* Right Panel: Agent Detail */}
+          {/* Detail panel */}
           <div className="lg:col-span-2">
-            <div className="bg-dark-navy rounded-lg border border-white/6 p-6">
+            <div
+              className="rounded-card p-6 h-full"
+              style={{ border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,9,71,0.3)' }}
+            >
               {activeAgent && (
                 <>
                   <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-white mb-2">{activeAgent.name}</h2>
-                    <p className="text-white/55">{activeAgent.description}</p>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h2 className="text-2xl font-space font-bold text-white" style={{ letterSpacing: '-0.02em' }}>
+                        {activeAgent.name}
+                      </h2>
+                      {activeStatus?.status === 'running' && (
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full"
+                          style={{ background: 'rgba(255,22,53,0.15)', color: '#FF1635', fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.08em' }}
+                        >
+                          RUNNING
+                        </span>
+                      )}
+                      {activeStatus?.status === 'done' && (
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full"
+                          style={{ background: 'rgba(133,153,255,0.12)', color: '#8599FF', fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.08em' }}
+                        >
+                          DONE
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-white/45 text-sm">{activeAgent.description}</p>
                   </div>
 
                   {activeStatus && (
                     <>
                       <div className="mb-6">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-white/70">Progress</span>
-                          <span className="text-sm font-medium text-white/70">{activeStatus.progress}%</span>
+                          <span className="text-xs text-white/40" style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.08em' }}>
+                            PROGRESS
+                          </span>
+                          <span className="text-xs text-white/60 font-mono">{activeStatus.progress}%</span>
                         </div>
-                        <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+                        <div className="w-full h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
                           <div
-                            className="bg-vista-blue h-full rounded-full transition-all duration-500"
-                            style={{ width: `${activeStatus.progress}%` }}
+                            className="h-1.5 rounded-full transition-all duration-500"
+                            style={{
+                              width: `${activeStatus.progress}%`,
+                              background: activeStatus.status === 'done'
+                                ? 'linear-gradient(90deg, #8599FF, #A100FF)'
+                                : 'linear-gradient(90deg, #FF1635, #FF1673)',
+                            }}
                           />
                         </div>
                       </div>
 
                       <div>
-                        <h3 className="text-lg font-semibold text-white mb-3">Activity Log</h3>
+                        <p
+                          className="text-white/40 text-xs uppercase mb-3"
+                          style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.10em' }}
+                        >
+                          Activity Log
+                        </p>
                         {activeStatus.log.length > 0 ? (
-                          <div className="bg-deep-navy rounded-lg p-4 max-h-96 overflow-y-auto border border-white/6">
-                            <ul className="space-y-2">
-                              {activeStatus.log.map((entry, index) => (
-                                <li key={index} className="text-sm text-white/70 font-mono">
-                                  {entry}
-                                </li>
+                          <div
+                            className="rounded-lg p-4 max-h-80 overflow-y-auto"
+                            style={{ background: 'rgba(0,6,35,0.6)', border: '1px solid rgba(255,255,255,0.05)' }}
+                          >
+                            <ul className="space-y-1.5">
+                              {(Array.isArray(activeStatus.log) ? activeStatus.log : []).map((entry: string, i: number) => (
+                                <li key={i} className="text-xs text-white/60 font-mono">{entry}</li>
                               ))}
                             </ul>
                           </div>
                         ) : (
-                          <div className="bg-deep-navy rounded-lg p-4 text-center border border-white/6">
-                            <p className="text-white/45 text-sm">No activity yet</p>
+                          <div
+                            className="rounded-lg p-6 text-center"
+                            style={{ background: 'rgba(0,6,35,0.4)', border: '1px solid rgba(255,255,255,0.04)' }}
+                          >
+                            <p className="text-white/25 text-sm">
+                              {activeStatus.status === 'pending' ? 'Waiting to start...' : 'No activity yet'}
+                            </p>
                           </div>
                         )}
                       </div>
@@ -229,6 +309,25 @@ export function Pipeline() {
             </div>
           </div>
         </div>
+
+        {/* Running agent callout */}
+        {runningAgent && (
+          <div
+            className="mt-6 px-5 py-4 rounded-card flex items-center gap-4"
+            style={{
+              background: 'rgba(255,22,53,0.06)',
+              border: '1px solid rgba(255,22,53,0.15)',
+            }}
+          >
+            <div className="w-2 h-2 rounded-full bg-big-red flex-shrink-0" style={{ animation: 'pulse 1s infinite' }} />
+            <p className="text-sm text-white/70">
+              <span className="text-white font-semibold">
+                {AGENTS.find((a) => a.id === runningAgent.agentId)?.name}
+              </span>{' '}
+              is running
+            </p>
+          </div>
+        )}
       </div>
     </Layout>
   );

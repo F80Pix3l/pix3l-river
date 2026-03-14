@@ -1,6 +1,6 @@
 -- Create generated_content table for AI-generated platform content
 CREATE TABLE public.generated_content (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   job_id UUID REFERENCES public.videos(id) ON DELETE CASCADE NOT NULL,
   platform TEXT CHECK (platform IN ('youtube', 'tiktok', 'instagram')) NOT NULL,
   title TEXT,

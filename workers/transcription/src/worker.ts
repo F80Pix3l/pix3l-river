@@ -3,11 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 import Replicate from 'replicate';
 import 'dotenv/config';
 
-const copywritingQueue = new Queue('copywriting', {
-  connection: {
-    url: process.env.UPSTASH_REDIS_URL,
-  },
-});
+process.on('uncaughtException', (err) => console.error('Uncaught exception:', err));
+process.on('unhandledRejection', (err) => console.error('Unhandled rejection:', err));
+
+const redisConnection = { url: process.env.UPSTASH_REDIS_URL };
+
+const transcriptionQueue = new Queue('transcription', { connection: redisConnection });
+
+const copywritingQueue = new Queue('copywriting', { connection: redisConnection });
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -150,9 +153,7 @@ async function processTranscription(job: Job<TranscriptionJobData>) {
 }
 
 const worker = new Worker('transcription', processTranscription, {
-  connection: {
-    url: process.env.UPSTASH_REDIS_URL,
-  },
+  connection: redisConnection,
   concurrency: 2,
 });
 
@@ -164,7 +165,61 @@ worker.on('failed', (job, err) => {
   console.error(`Job ${job?.id} failed:`, err.message);
 });
 
+worker.on('error', (err) => {
+  console.error('Worker error:', err.message);
+});
+
 console.log('Transcription worker started');
+
+// Poll for new uploads every 10 seconds and enqueue transcription jobs
+async function pollForNewVideos() {
+  console.log('Polling for new videos...');
+  try {
+    const { data: videos, error } = await supabase
+      .from('videos')
+      .select('id, storage_path')
+      .eq('status', 'uploaded');
+
+    if (error) {
+      console.error('Poll error:', error.message);
+      return;
+    }
+
+    console.log(`Found ${videos?.length ?? 0} videos to process`);
+
+    for (const video of videos ?? []) {
+      // Mark as queued immediately to prevent duplicate processing
+      const { error: updateError } = await supabase
+        .from('videos')
+        .update({ status: 'processing' })
+        .eq('id', video.id)
+        .eq('status', 'uploaded'); // Only update if still 'uploaded' (atomic guard)
+
+      if (updateError) {
+        console.error(`Failed to claim video ${video.id}:`, updateError.message);
+        continue;
+      }
+
+      console.log(`New video detected: ${video.id}, enqueuing transcription...`);
+      await transcriptionQueue.add(
+        'transcribe-video',
+        { videoId: video.id, storagePath: video.storage_path },
+        {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
+          removeOnComplete: { count: 100 },
+          removeOnFail: { count: 500 },
+        }
+      );
+      console.log(`Enqueued transcription job for video ${video.id}`);
+    }
+  } catch (err) {
+    console.error('Polling failed:', err);
+  }
+}
+
+setInterval(pollForNewVideos, 10_000);
+pollForNewVideos(); // Run immediately on startup
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {

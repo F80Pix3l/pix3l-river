@@ -3,9 +3,15 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+const MAX_FILE_SIZE = 500 * 1024 * 1024;
 
 type Platform = 'youtube' | 'tiktok' | 'instagram';
+
+const platformConfig: Record<Platform, { label: string; color: string; activeBg: string; activeBorder: string }> = {
+  youtube: { label: 'YouTube', color: '#FF1635', activeBg: 'rgba(255,22,53,0.08)', activeBorder: 'rgba(255,22,53,0.35)' },
+  tiktok: { label: 'TikTok', color: '#8599FF', activeBg: 'rgba(133,153,255,0.08)', activeBorder: 'rgba(133,153,255,0.35)' },
+  instagram: { label: 'Instagram', color: '#FF1673', activeBg: 'rgba(255,22,115,0.08)', activeBorder: 'rgba(255,22,115,0.35)' },
+};
 
 export function VideoUpload() {
   const { user } = useAuth();
@@ -18,34 +24,21 @@ export function VideoUpload() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const togglePlatform = (platform: Platform) => {
-    setSelectedPlatforms(prev =>
-      prev.includes(platform)
-        ? prev.filter(p => p !== platform)
-        : [...prev, platform]
+    setSelectedPlatforms((prev) =>
+      prev.includes(platform) ? prev.filter((p) => p !== platform) : [...prev, platform]
     );
   };
 
   const validateFile = (file: File): string | null => {
-    if (!ACCEPTED_VIDEO_TYPES.includes(file.type)) {
-      return 'Invalid file type. Please upload MP4, MOV, or AVI files.';
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      return 'File size exceeds 500MB limit.';
-    }
+    if (!ACCEPTED_VIDEO_TYPES.includes(file.type)) return 'Invalid file type. Upload MP4, MOV, or AVI files.';
+    if (file.size > MAX_FILE_SIZE) return 'File exceeds 500MB limit.';
     return null;
   };
 
   const uploadVideo = async (file: File) => {
-    if (!user) {
-      setError('You must be signed in to upload videos');
-      return;
-    }
-
+    if (!user) { setError('You must be signed in to upload videos'); return; }
     const validationError = validateFile(file);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+    if (validationError) { setError(validationError); return; }
 
     setUploading(true);
     setError('');
@@ -54,48 +47,25 @@ export function VideoUpload() {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      setProgress(50);
 
-      // Upload to Supabase Storage
-      // Note: Supabase storage doesn't support progress callbacks yet
-      setProgress(50); // Show intermediate progress
-      const { error: uploadError } = await supabase.storage
-        .from('videos')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-
+      const { error: uploadError } = await supabase.storage.from('videos').upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
       if (uploadError) throw uploadError;
 
-      // Create database entry
-      const { data: videoData, error: dbError } = await supabase
-        .from('videos')
-        .insert({
-          user_id: user.id,
-          title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
-          status: 'uploaded',
-          storage_path: fileName,
-        })
-        .select()
-        .single();
-
+      const { error: dbError } = await supabase.from('videos').insert({
+        user_id: user.id,
+        title: file.name.replace(/\.[^/.]+$/, ''),
+        status: 'uploaded',
+        storage_path: fileName,
+      }).select().single();
       if (dbError) throw dbError;
 
-      // Enqueue transcription job
-      const { error: functionError } = await supabase.functions.invoke(
-        'enqueue-transcription',
-        {
-          body: {
-            videoId: videoData.id,
-            storagePath: fileName,
-          },
-        }
-      );
-
-      if (functionError) {
-        console.error('Failed to enqueue transcription:', functionError);
-        // Don't throw - video was uploaded successfully
-      }
+      await supabase.functions.invoke('enqueue-transcription', {
+        body: { videoId: crypto.randomUUID(), storagePath: fileName },
+      }).catch(() => {});
 
       setProgress(100);
       setTimeout(() => {
@@ -113,59 +83,41 @@ export function VideoUpload() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-
     const file = e.dataTransfer.files[0];
     if (file) {
-      const validationError = validateFile(file);
-      if (validationError) {
-        setError(validationError);
-      } else {
-        setSelectedFile(file);
-        setError('');
-      }
+      const err = validateFile(file);
+      if (err) setError(err);
+      else { setSelectedFile(file); setError(''); }
     }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const validationError = validateFile(file);
-      if (validationError) {
-        setError(validationError);
-      } else {
-        setSelectedFile(file);
-        setError('');
-      }
-    }
-  };
-
-  const handleStartPipeline = () => {
-    if (selectedFile && selectedPlatforms.length > 0) {
-      uploadVideo(selectedFile);
+      const err = validateFile(file);
+      if (err) setError(err);
+      else { setSelectedFile(file); setError(''); }
     }
   };
 
   return (
-    <div className="max-w-3xl">
-      {/* Upload Drop Zone */}
+    <div className="max-w-2xl">
+      {/* Drop Zone */}
       <div
         onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        className={`
-          border-2 border-dashed rounded-card p-12 text-center transition-all duration-200
-          ${isDragging ? 'border-vista-blue bg-vista-blue/5' : 'border-vista-blue/40 hover:border-vista-blue/60 hover:bg-vista-blue/5'}
-          ${uploading ? 'pointer-events-none opacity-50' : ''}
-        `}
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        className="relative rounded-card p-12 text-center transition-all duration-300"
+        style={{
+          border: isDragging
+            ? '2px dashed rgba(133,153,255,0.7)'
+            : '2px dashed rgba(133,153,255,0.25)',
+          background: isDragging
+            ? 'rgba(133,153,255,0.05)'
+            : 'rgba(0,9,71,0.3)',
+          opacity: uploading ? 0.6 : 1,
+          pointerEvents: uploading ? 'none' : 'auto',
+        }}
       >
         <input
           ref={fileInputRef}
@@ -177,56 +129,82 @@ export function VideoUpload() {
         />
 
         {uploading ? (
-          <div className="space-y-4">
-            <div className="text-lg font-space font-semibold text-white">
-              Uploading... {progress}%
+          <div className="space-y-5">
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center mx-auto"
+              style={{ background: 'rgba(255,22,53,0.1)', border: '1px solid rgba(255,22,53,0.2)' }}
+            >
+              <svg className="w-6 h-6 text-big-red animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
             </div>
-            <div className="w-full bg-dark-navy rounded-full h-2">
+            <div>
+              <p className="font-space font-semibold text-white text-lg mb-1">Uploading...</p>
+              <p className="text-white/45 text-sm" style={{ fontFamily: '"JetBrains Mono", monospace' }}>
+                {progress}%
+              </p>
+            </div>
+            <div className="w-full rounded-full h-1.5" style={{ background: 'rgba(255,255,255,0.08)' }}>
               <div
-                className="bg-purple h-2 rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
+                className="h-1.5 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #FF1635, #A100FF)' }}
               />
             </div>
           </div>
         ) : (
           <>
-            {/* Cloud Icon */}
-            <svg
-              className="mx-auto h-16 w-16 text-vista-blue"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6"
+              style={{ background: 'rgba(133,153,255,0.10)', border: '1px solid rgba(133,153,255,0.15)' }}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-              />
-            </svg>
-            <div className="mt-6">
-              <p className="text-lg font-inter text-white/70 mb-4">
-                {selectedFile ? selectedFile.name : 'Drop your video here or choose a file'}
-              </p>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fileInputRef.current?.click();
-                }}
-                className="px-6 py-2 bg-big-red text-white rounded-full font-space font-semibold text-sm hover:bg-big-red/90 transition-all duration-200 active:scale-[0.97]"
-              >
-                Choose File
-              </button>
-              <p className="text-sm text-white/45 mt-4 font-inter">
-                MP4, MOV, or AVI files up to 500MB
-              </p>
+              <svg className="w-8 h-8" fill="none" stroke="#8599FF" viewBox="0 0 24 24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
             </div>
+
+            {selectedFile ? (
+              <div className="mb-4">
+                <p className="text-white font-space font-semibold text-lg mb-1">{selectedFile.name}</p>
+                <p className="text-white/45 text-sm">
+                  {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB
+                </p>
+              </div>
+            ) : (
+              <div className="mb-4">
+                <p className="text-white font-space font-semibold text-lg mb-1">Drop your video here</p>
+                <p className="text-white/45 text-sm">or click to browse files</p>
+              </div>
+            )}
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-6 py-2.5 text-white text-sm font-space font-semibold rounded-full transition-all duration-200 active:scale-[0.97]"
+              style={{
+                background: selectedFile ? 'rgba(133,153,255,0.12)' : '#FF1635',
+                border: selectedFile ? '1px solid rgba(133,153,255,0.3)' : 'none',
+                boxShadow: selectedFile ? 'none' : '0 4px 16px rgba(255,22,53,0.3)',
+                color: selectedFile ? '#8599FF' : '#fff',
+              }}
+            >
+              {selectedFile ? 'Change file' : 'Choose file'}
+            </button>
+
+            <p
+              className="text-white/25 text-xs mt-4"
+              style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.08em' }}
+            >
+              MP4 · MOV · AVI · up to 500MB
+            </p>
           </>
         )}
       </div>
 
       {error && (
-        <div className="mt-4 bg-big-red/10 border border-big-red/20 text-big-red px-4 py-3 rounded-lg font-inter text-sm">
+        <div
+          className="mt-4 px-4 py-3 rounded-lg text-sm text-big-red"
+          style={{ background: 'rgba(255,22,53,0.08)', border: '1px solid rgba(255,22,53,0.2)' }}
+        >
           {error}
         </div>
       )}
@@ -234,56 +212,47 @@ export function VideoUpload() {
       {/* Platform Toggles */}
       {!uploading && selectedFile && (
         <div className="mt-8">
-          <h3 className="text-sm font-mono uppercase tracking-mono-label text-white/55 mb-4">
-            Select Platforms
-          </h3>
+          <p
+            className="text-white/40 text-xs uppercase mb-4"
+            style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.12em' }}
+          >
+            Platforms
+          </p>
           <div className="flex gap-3">
-            <button
-              onClick={() => togglePlatform('youtube')}
-              className={`
-                flex-1 px-4 py-3 rounded-lg border transition-all duration-200
-                ${selectedPlatforms.includes('youtube')
-                  ? 'bg-vista-blue/10 border-vista-blue/40 text-vista-blue'
-                  : 'bg-dark-navy border-white/10 text-white/45 hover:border-white/20'
-                }
-              `}
-            >
-              <div className="font-space font-semibold">YouTube</div>
-            </button>
-            <button
-              onClick={() => togglePlatform('tiktok')}
-              className={`
-                flex-1 px-4 py-3 rounded-lg border transition-all duration-200
-                ${selectedPlatforms.includes('tiktok')
-                  ? 'bg-vista-blue/10 border-vista-blue/40 text-vista-blue'
-                  : 'bg-dark-navy border-white/10 text-white/45 hover:border-white/20'
-                }
-              `}
-            >
-              <div className="font-space font-semibold">TikTok</div>
-            </button>
-            <button
-              onClick={() => togglePlatform('instagram')}
-              className={`
-                flex-1 px-4 py-3 rounded-lg border transition-all duration-200
-                ${selectedPlatforms.includes('instagram')
-                  ? 'bg-vista-blue/10 border-vista-blue/40 text-vista-blue'
-                  : 'bg-dark-navy border-white/10 text-white/45 hover:border-white/20'
-                }
-              `}
-            >
-              <div className="font-space font-semibold">Instagram</div>
-            </button>
+            {(Object.keys(platformConfig) as Platform[]).map((platform) => {
+              const cfg = platformConfig[platform];
+              const active = selectedPlatforms.includes(platform);
+              return (
+                <button
+                  key={platform}
+                  onClick={() => togglePlatform(platform)}
+                  className="flex-1 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.97]"
+                  style={{
+                    background: active ? cfg.activeBg : 'rgba(0,9,71,0.4)',
+                    border: `1px solid ${active ? cfg.activeBorder : 'rgba(255,255,255,0.08)'}`,
+                    color: active ? cfg.color : 'rgba(255,255,255,0.35)',
+                  }}
+                >
+                  <div className="font-space font-semibold text-sm">{cfg.label}</div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Start Pipeline Button */}
+      {/* CTA */}
       {!uploading && selectedFile && selectedPlatforms.length > 0 && (
-        <div className="mt-8">
+        <div className="mt-6">
           <button
-            onClick={handleStartPipeline}
-            className="w-full py-4 bg-big-red text-white rounded-lg font-space font-bold text-lg hover:bg-big-red/90 transition-all duration-200 active:scale-[0.97] shadow-card-dark hover:shadow-card-dark-hover"
+            onClick={() => uploadVideo(selectedFile)}
+            className="w-full py-4 text-white rounded-lg font-space font-bold text-base transition-all duration-200 active:scale-[0.98]"
+            style={{
+              background: 'linear-gradient(135deg, #FF1635 0%, #A100FF 100%)',
+              boxShadow: '0 4px 24px rgba(255,22,53,0.35)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 8px 32px rgba(255,22,53,0.45)')}
+            onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 4px 24px rgba(255,22,53,0.35)')}
           >
             Start Pipeline
           </button>

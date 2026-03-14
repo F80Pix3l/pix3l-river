@@ -1,6 +1,6 @@
 -- Create transcripts table for storing video transcriptions
 CREATE TABLE public.transcripts (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   job_id UUID REFERENCES public.videos(id) ON DELETE CASCADE NOT NULL UNIQUE,
   content TEXT NOT NULL,
   word_count INTEGER NOT NULL,
