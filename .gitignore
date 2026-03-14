@@ -1,0 +1,42 @@
+# Claude Code
+.claude/
+
+# Branding reference files (screenshots, PDFs, generated images)
+branding/screenshot-*.png
+branding/images/
+branding/*.pdf
+
+# Dependencies
+web/node_modules/
+node_modules/
+
+# Build output
+web/dist/
+web/.vite/
+
+# Environment
+.env
+.env.local
+.env.*.local
+web/.env
+web/.env.local
+web/.env.*.local
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Supabase
+web/supabase/.temp/
