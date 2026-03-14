@@ -1,6 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import Replicate from 'replicate';
 import 'dotenv/config';
 
 const supabase = createClient(
@@ -10,6 +11,10 @@ const supabase = createClient(
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
+});
+
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN!,
 });
 
 interface CopywritingJobData {
@@ -33,6 +38,24 @@ interface GeneratedCopy {
     alt_text: string;
   };
 }
+
+const THUMBNAIL_CONFIGS: Record<string, { width: number; height: number; style: string }> = {
+  youtube: {
+    width: 1280,
+    height: 720,
+    style: 'YouTube video thumbnail, widescreen 16:9, bold and eye-catching, cinematic, professional',
+  },
+  tiktok: {
+    width: 576,
+    height: 1024,
+    style: 'TikTok video thumbnail, 9:16 portrait, vibrant, trendy, energetic',
+  },
+  instagram: {
+    width: 1024,
+    height: 1024,
+    style: 'Instagram post, square format, aesthetic, clean composition, visually striking',
+  },
+};
 
 const SYSTEM_PROMPT = `You are a social media copywriter for RIVER, an AI content platform. Your job is to write platform-optimized content from video transcripts.
 
@@ -64,6 +87,62 @@ Return JSON in this exact format:
     "alt_text": "string (descriptive alt text for accessibility, 100 chars max)"
   }
 }`;
+}
+
+async function generateAndUploadThumbnail(
+  videoId: string,
+  platform: string,
+  title: string
+): Promise<string | null> {
+  const config = THUMBNAIL_CONFIGS[platform];
+  if (!config) return null;
+
+  try {
+    const prompt = `${title}. ${config.style}. High quality, sharp, vibrant colors, digital artwork.`;
+
+    const output = await replicate.run('black-forest-labs/flux-schnell', {
+      input: {
+        prompt,
+        width: config.width,
+        height: config.height,
+        num_outputs: 1,
+        num_inference_steps: 4,
+        output_format: 'jpg',
+        output_quality: 85,
+      },
+    }) as unknown as Array<{ blob: () => Promise<Blob>; url: () => URL }>;
+
+    const fileOutput = Array.isArray(output) ? output[0] : output;
+    if (!fileOutput) return null;
+
+    const blob = await (fileOutput as { blob: () => Promise<Blob> }).blob();
+    const arrayBuffer = await blob.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const storagePath = `thumbnails/${videoId}/${platform}.jpg`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('videos')
+      .upload(storagePath, buffer, {
+        contentType: 'image/jpeg',
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error(`Failed to upload thumbnail for ${platform}:`, uploadError.message);
+      return null;
+    }
+
+    // Signed URL valid for 10 years
+    const { data: signedUrlData } = await supabase.storage
+      .from('videos')
+      .createSignedUrl(storagePath, 315360000);
+
+    return signedUrlData?.signedUrl ?? null;
+  } catch (err) {
+    console.error(`Thumbnail generation failed for ${platform}:`, err);
+    return null;
+  }
 }
 
 async function processCopywriting(job: Job<CopywritingJobData>) {
@@ -120,7 +199,7 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
       throw new Error(`Failed to parse Claude response as JSON: ${rawContent.text.slice(0, 200)}`);
     }
 
-    // Save generated content for each platform
+    // Build platform content array
     const platforms: Array<{
       platform: 'youtube' | 'tiktok' | 'instagram';
       title: string;
@@ -147,6 +226,7 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
       },
     ];
 
+    // Save text content for all platforms
     for (const content of platforms) {
       const { error: insertError } = await supabase
         .from('generated_content')
@@ -167,6 +247,37 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
       }
     }
 
+    console.log(`[${job.id}] Text content saved. Generating thumbnails...`);
+
+    // Generate thumbnails in parallel for all platforms
+    const thumbnailResults = await Promise.allSettled(
+      platforms.map(async (content) => {
+        const thumbnailUrl = await generateAndUploadThumbnail(
+          videoId,
+          content.platform,
+          content.title
+        );
+
+        if (thumbnailUrl) {
+          await supabase
+            .from('generated_content')
+            .update({ thumbnail_url: thumbnailUrl })
+            .eq('job_id', videoId)
+            .eq('platform', content.platform);
+
+          console.log(`[${job.id}] Thumbnail uploaded for ${content.platform}`);
+        }
+
+        return { platform: content.platform, thumbnailUrl };
+      })
+    );
+
+    const thumbnailsSaved = thumbnailResults.filter(
+      (r) => r.status === 'fulfilled' && r.value.thumbnailUrl
+    ).length;
+
+    console.log(`[${job.id}] ${thumbnailsSaved}/3 thumbnails generated`);
+
     // Update pipeline status to done
     await supabase
       .from('pipeline_status')
@@ -186,7 +297,7 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
 
     console.log(`[${job.id}] Copywriting completed for video ${videoId}`);
 
-    return { success: true, platforms: ['youtube', 'tiktok', 'instagram'] };
+    return { success: true, platforms: ['youtube', 'tiktok', 'instagram'], thumbnailsSaved };
   } catch (error) {
     console.error(`[${job.id}] Copywriting failed:`, error);
 
