@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { Auth } from './components/Auth';
+import { Login } from './pages/Login';
+import { Signup } from './pages/Signup';
 import { Dashboard } from './components/Dashboard';
 import { Pipeline } from './components/Pipeline';
 import { Review } from './components/Review';
@@ -16,10 +17,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return user ? <>{children}</> : <Navigate to="/auth" replace />;
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
-function AppContent() {
+function AuthRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -30,11 +31,16 @@ function AppContent() {
     );
   }
 
+  return user ? <Navigate to="/upload" replace /> : <>{children}</>;
+}
+
+function AppContent() {
   return (
     <Routes>
-      <Route path="/auth" element={user ? <Navigate to="/" replace /> : <Auth />} />
+      <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
+      <Route path="/signup" element={<AuthRoute><Signup /></AuthRoute>} />
       <Route
-        path="/"
+        path="/upload"
         element={
           <ProtectedRoute>
             <Dashboard />
@@ -57,6 +63,8 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
+      <Route path="/" element={<Navigate to="/upload" replace />} />
+      <Route path="/auth" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }
