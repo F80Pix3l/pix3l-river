@@ -26,14 +26,18 @@ export function Login() {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4 relative"
-      style={{
-        background:
-          'radial-gradient(ellipse 70% 60% at 80% 20%, rgba(255,22,53,0.12) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 15% 80%, rgba(161,0,255,0.10) 0%, transparent 55%), #000623',
-      }}
-    >
-      {/* Dot grid */}
+    <div className="min-h-screen flex items-center justify-center p-4 relative" style={{ background: '#000623' }}>
+      {/* Gradient orbs — z-1 */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(ellipse 70% 60% at 80% 20%, rgba(255,22,53,0.12) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 15% 80%, rgba(161,0,255,0.10) 0%, transparent 55%)',
+          zIndex: 1,
+        }}
+      />
+      {/* Dot grid — z-2, above gradient */}
       <div
         aria-hidden="true"
         className="fixed inset-0 pointer-events-none"
@@ -42,10 +46,10 @@ export function Login() {
           backgroundSize: '36px 36px',
           maskImage: 'radial-gradient(ellipse 90% 80% at 50% 50%, black 30%, transparent 100%)',
           WebkitMaskImage: 'radial-gradient(ellipse 90% 80% at 50% 50%, black 30%, transparent 100%)',
-          zIndex: 1,
+          zIndex: 2,
         }}
       />
-      <div className="w-full max-w-md relative" style={{ zIndex: 2 }}>
+      <div className="w-full max-w-md relative" style={{ zIndex: 3 }}>
         {/* Wordmark */}
         <div className="text-center mb-10">
           <style>{`
