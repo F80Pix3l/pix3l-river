@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Layout } from './Layout';
-import { GlowCard } from './GlowCard';
 
 interface AgentStatus {
   agentId: number;
@@ -180,7 +179,7 @@ export function Pipeline() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Agent list */}
           <div className="lg:col-span-1">
-            <GlowCard>
+            <div style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'hidden' }}>
               <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <p
                   className="text-white/40 text-xs uppercase"
@@ -302,12 +301,12 @@ export function Pipeline() {
                   })}
                 </ul>
               </div>
-            </GlowCard>
+            </div>
           </div>
 
           {/* Detail panel */}
           <div className="lg:col-span-2">
-            <GlowCard className="h-full" innerClassName="p-6 h-full">
+            <div className="p-6 h-full" style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'hidden' }}>
               {activeAgent && (
                 <>
                   <div className="mb-6">
@@ -405,7 +404,7 @@ export function Pipeline() {
                   )}
                 </>
               )}
-            </GlowCard>
+            </div>
           </div>
         </div>
 

@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { GlowCard } from './GlowCard';
 
 const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
@@ -102,16 +101,16 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
   return (
     <div className="max-w-2xl">
       {/* Drop Zone */}
-      <GlowCard
+      <div
+        className="p-12 text-center"
         onDrop={handleDrop}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
-        style={{ opacity: uploading ? 0.6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}
-        innerClassName="p-12 text-center"
-        innerStyle={{
-          border: isDragging
-            ? '2px dashed rgba(133,153,255,0.7)'
-            : '2px dashed rgba(133,153,255,0.25)',
+        style={{
+          borderRadius: 12,
+          opacity: uploading ? 0.6 : 1,
+          pointerEvents: uploading ? 'none' : 'auto',
+          border: isDragging ? '2px dashed rgba(133,153,255,0.7)' : '2px dashed rgba(133,153,255,0.25)',
           background: isDragging ? 'rgba(133,153,255,0.05)' : 'rgba(0,9,71,0.3)',
           transition: 'border-color 0.3s ease, background-color 0.3s ease',
         }}
@@ -195,7 +194,7 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
             </p>
           </>
         )}
-      </GlowCard>
+      </div>
 
       {error && (
         <div
