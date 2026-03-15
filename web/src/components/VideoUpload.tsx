@@ -99,7 +99,7 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
   };
 
   return (
-    <div className="max-w-2xl">
+    <div>
       {/* Drop Zone */}
       <div
         className="p-12 text-center"
