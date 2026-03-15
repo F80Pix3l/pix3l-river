@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Layout } from './Layout';
+import { GlowingEffect } from './ui/glowing-effect';
 
 type Platform = 'youtube' | 'tiktok' | 'instagram';
 type ViewMode = 'original' | 'brand-voice';
@@ -279,6 +280,8 @@ export function Review() {
           {/* Content panel */}
           <div className="lg:col-span-2 space-y-5">
             {/* Thumbnail — always from original */}
+            <div className="relative" style={{ borderRadius: 12 }}>
+              <GlowingEffect disabled={false} borderWidth={4} />
             <div className="p-5" style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'hidden' }}>
               <p
                 className="text-white/35 text-xs uppercase mb-3"
@@ -297,8 +300,11 @@ export function Review() {
                 )}
               </div>
             </div>
+            </div>
 
             {/* Content */}
+            <div className="relative" style={{ borderRadius: 12 }}>
+              <GlowingEffect disabled={false} borderWidth={4} />
             <div className="p-5" style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'hidden' }}>
               <p
                 className="text-white/35 text-xs uppercase mb-4"
@@ -401,6 +407,7 @@ export function Review() {
                 </div>
               </div>
             </div>
+            </div>
 
             {/* AI Disclosure */}
             <div
@@ -418,7 +425,8 @@ export function Review() {
 
           {/* Actions panel */}
           <div className="lg:col-span-1">
-            <div className="sticky top-6 p-5" style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'visible' }}>
+            <div className="sticky top-6 p-5 relative" style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'visible' }}>
+              <GlowingEffect disabled={false} borderWidth={4} />
               <p
                 className="text-white/35 text-xs uppercase mb-4"
                 style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.10em' }}

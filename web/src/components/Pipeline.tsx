@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Layout } from './Layout';
+import { GlowingEffect } from './ui/glowing-effect';
 
 interface AgentStatus {
   agentId: number;
@@ -185,6 +186,8 @@ export function Pipeline() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Agent list */}
           <div className="lg:col-span-1">
+            <div className="relative" style={{ borderRadius: 12 }}>
+              <GlowingEffect disabled={false} borderWidth={4} />
             <div style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'hidden' }}>
               <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <p
@@ -308,10 +311,13 @@ export function Pipeline() {
                 </ul>
               </div>
             </div>
+            </div>
           </div>
 
           {/* Detail panel */}
           <div className="lg:col-span-2">
+            <div className="relative" style={{ borderRadius: 12 }}>
+              <GlowingEffect disabled={false} borderWidth={4} />
             <div className="p-6 h-full" style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'hidden' }}>
               {activeAgent && (
                 <>
@@ -423,6 +429,7 @@ export function Pipeline() {
                   )}
                 </>
               )}
+            </div>
             </div>
           </div>
         </div>

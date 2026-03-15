@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { GlowingEffect } from '../components/ui/glowing-effect';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -57,7 +58,7 @@ export function Login() {
 
         {/* Card */}
         <div
-          className="p-8"
+          className="p-8 relative"
           style={{
             border: '1px solid rgba(255,255,255,0.06)',
             borderRadius: 12,
@@ -67,6 +68,7 @@ export function Login() {
             boxShadow: '0 8px 40px rgba(0,0,0,0.45), 0 2px 10px rgba(0,0,0,0.25)',
           }}
         >
+          <GlowingEffect disabled={false} borderWidth={4} />
           <h2 className="text-2xl font-space font-bold text-white mb-6" style={{ letterSpacing: '-0.02em' }}>
             Sign in
           </h2>
