@@ -2,6 +2,7 @@ import { Worker, Job } from 'bullmq';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import Replicate from 'replicate';
+import { Resend } from 'resend';
 import 'dotenv/config';
 
 const supabase = createClient(
@@ -16,6 +17,8 @@ const anthropic = new Anthropic({
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN!,
 });
+
+const resend = new Resend(process.env.RESEND_API_KEY!);
 
 interface CopywritingJobData {
   videoId: string;
@@ -143,6 +146,50 @@ async function generateAndUploadThumbnail(
   } catch (err) {
     console.error(`Thumbnail generation failed for ${platform}:`, err);
     return null;
+  }
+}
+
+async function sendCompletionEmail(videoId: string): Promise<void> {
+  try {
+    const { data: video } = await supabase
+      .from('videos')
+      .select('title, user_id')
+      .eq('id', videoId)
+      .single();
+
+    if (!video?.user_id) return;
+
+    const { data: userData } = await supabase.auth.admin.getUserById(video.user_id);
+    const email = userData?.user?.email;
+    if (!email) return;
+
+    const appUrl = process.env.APP_URL ?? 'https://river.pix3l.com';
+    const reviewUrl = `${appUrl}/review/${videoId}`;
+    const title = video.title ?? 'Your video';
+
+    await resend.emails.send({
+      from: 'RIVER <noreply@pix3l.com>',
+      to: email,
+      subject: `Your content is ready: ${title}`,
+      html: `
+        <div style="font-family: 'Space Grotesk', sans-serif; background: #0A0E1A; color: #F0F4FF; padding: 40px; max-width: 600px; margin: 0 auto; border-radius: 12px;">
+          <h1 style="color: #F0F4FF; font-size: 24px; margin-bottom: 8px;">Your content is ready.</h1>
+          <p style="color: #8599FF; font-size: 16px; margin-bottom: 32px;">${title}</p>
+          <p style="color: #B0BAD8; font-size: 15px; line-height: 1.6; margin-bottom: 32px;">
+            RIVER finished generating your social media copy and thumbnails for YouTube, TikTok, and Instagram.
+            Review, edit, and approve your content below.
+          </p>
+          <a href="${reviewUrl}" style="display: inline-block; background: #FF1635; color: #fff; font-weight: 700; font-size: 15px; padding: 14px 28px; border-radius: 8px; text-decoration: none;">
+            Review Content
+          </a>
+          <p style="color: #4A5578; font-size: 13px; margin-top: 40px;">RIVER by Pix3l</p>
+        </div>
+      `,
+    });
+
+    console.log(`Completion email sent to ${email} for video ${videoId}`);
+  } catch (err) {
+    console.error('Failed to send completion email:', err);
   }
 }
 
@@ -297,6 +344,8 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
       .from('videos')
       .update({ status: 'completed' })
       .eq('id', videoId);
+
+    await sendCompletionEmail(videoId);
 
     console.log(`[${job.id}] Copywriting completed for video ${videoId}`);
 
