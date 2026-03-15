@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/worker.ts",
-    "start": "node dist/worker.js"
+    "start": "node lib/worker.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

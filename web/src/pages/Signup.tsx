@@ -113,7 +113,7 @@ export function Signup() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                className="w-full px-4 py-3 rounded-lg text-white text-sm placeholder-white/25 focus:outline-none transition-colors duration-200"
+                className="w-full px-4 py-3 rounded-lg text-white text-sm placeholder-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-pinky/55 focus-visible:ring-offset-0 transition-[border-color] duration-200"
                 style={{
                   background: 'rgba(0,6,35,0.8)',
                   border: '1px solid rgba(255,255,255,0.10)',
@@ -141,7 +141,7 @@ export function Signup() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="new-password"
-                className="w-full px-4 py-3 rounded-lg text-white text-sm placeholder-white/25 focus:outline-none transition-colors duration-200"
+                className="w-full px-4 py-3 rounded-lg text-white text-sm placeholder-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-pinky/55 focus-visible:ring-offset-0 transition-[border-color] duration-200"
                 style={{
                   background: 'rgba(0,6,35,0.8)',
                   border: '1px solid rgba(255,255,255,0.10)',
@@ -169,7 +169,7 @@ export function Signup() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 autoComplete="new-password"
-                className="w-full px-4 py-3 rounded-lg text-white text-sm placeholder-white/25 focus:outline-none transition-colors duration-200"
+                className="w-full px-4 py-3 rounded-lg text-white text-sm placeholder-white/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-pinky/55 focus-visible:ring-offset-0 transition-[border-color] duration-200"
                 style={{
                   background: 'rgba(0,6,35,0.8)',
                   border: '1px solid rgba(255,255,255,0.10)',
@@ -185,10 +185,11 @@ export function Signup() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full text-white py-3.5 px-4 rounded-lg font-space font-semibold text-sm transition-all duration-200 active:scale-[0.97] mt-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full text-white py-3.5 px-4 rounded-lg font-space font-semibold text-sm active:scale-[0.97] mt-1 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pinky focus-visible:ring-offset-2"
               style={{
                 background: '#FF1635',
                 boxShadow: '0 4px 20px rgba(255,22,53,0.35)',
+                transition: 'background 0.2s ease, transform 0.2s cubic-bezier(0.4,0,0.2,1)',
               }}
               onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#e01030'; }}
               onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = '#FF1635'; }}
@@ -199,7 +200,7 @@ export function Signup() {
 
           <p className="mt-6 text-center text-sm text-white/40">
             Already have an account?{' '}
-            <Link to="/login" className="text-vista-blue hover:text-white transition-colors duration-200">
+            <Link to="/login" className="text-vista-blue hover:text-white transition-[color] duration-200 focus-visible:outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-pinky focus-visible:ring-offset-1">
               Sign in
             </Link>
           </p>
