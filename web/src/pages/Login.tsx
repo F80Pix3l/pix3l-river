@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { GlowCard } from '../components/GlowCard';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -56,13 +57,12 @@ export function Login() {
         </div>
 
         {/* Card */}
-        <div
-          className="rounded-card p-8 border"
-          style={{
-            background: 'rgba(0,9,71,0.55)',
+        <GlowCard
+          bg="rgba(0,9,71,0.55)"
+          innerClassName="p-8"
+          innerStyle={{
             backdropFilter: 'blur(24px)',
             WebkitBackdropFilter: 'blur(24px)',
-            borderColor: 'rgba(255,255,255,0.08)',
             boxShadow: '0 8px 40px rgba(0,0,0,0.45), 0 2px 10px rgba(0,0,0,0.25)',
           }}
         >
@@ -150,7 +150,7 @@ export function Login() {
               Create account
             </Link>
           </p>
-        </div>
+        </GlowCard>
       </div>
     </div>
   );

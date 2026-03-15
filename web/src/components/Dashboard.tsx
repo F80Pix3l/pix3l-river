@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { VideoUpload } from './VideoUpload';
 import { Layout } from './Layout';
+import { GlowCard } from './GlowCard';
 
 interface Video {
   id: string;
@@ -114,20 +115,14 @@ export function Dashboard() {
               Loading...
             </div>
           ) : videos.length === 0 ? (
-            <div
-              className="rounded-card py-12 text-center"
-              style={{ background: 'rgba(0,9,71,0.3)', border: '1px solid rgba(255,255,255,0.06)' }}
-            >
+            <GlowCard innerClassName="py-12 text-center">
               <p className="text-white/35 text-sm" style={{ fontFamily: '"Inter", sans-serif' }}>
                 No videos yet. Upload your first video above.
               </p>
-            </div>
+            </GlowCard>
           ) : (
-            <div
-              className="rounded-card overflow-hidden"
-              style={{ border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,9,71,0.3)' }}
-            >
-              <ul className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+            <GlowCard>
+              <ul className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
                 {videos.map((video) => {
                   const cfg = statusConfig[video.status];
                   const isConfirming = confirmDeleteId === video.id;
@@ -239,7 +234,7 @@ export function Dashboard() {
                   );
                 })}
               </ul>
-            </div>
+            </GlowCard>
           )}
         </div>
       </div>
