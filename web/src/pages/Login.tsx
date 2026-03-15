@@ -56,7 +56,7 @@ export function Login() {
           </p>
           <h1
             className="text-white font-space font-bold"
-            style={{ fontSize: '5rem', letterSpacing: '-0.03em', lineHeight: 1 }}
+            style={{ fontSize: '7rem', letterSpacing: '-0.03em', lineHeight: 1 }}
           >
             RIVER
           </h1>
