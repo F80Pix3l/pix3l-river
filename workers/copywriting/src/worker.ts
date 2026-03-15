@@ -368,17 +368,21 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
     await sendCompletionEmail(videoId);
 
     // Enqueue brand voice job
-    await brandVoiceQueue.add(
-      'apply-brand-voice',
-      { videoId },
-      {
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 5000 },
-        removeOnComplete: { count: 100 },
-        removeOnFail: { count: 500 },
-      }
-    );
-    console.log(`[${job.id}] Enqueued brand-voice job for video ${videoId}`);
+    try {
+      const bvJob = await brandVoiceQueue.add(
+        'apply-brand-voice',
+        { videoId },
+        {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
+          removeOnComplete: { count: 100 },
+          removeOnFail: { count: 500 },
+        }
+      );
+      console.log(`[${job.id}] Enqueued brand-voice job ${bvJob.id} for video ${videoId}`);
+    } catch (bvErr) {
+      console.error(`[${job.id}] Failed to enqueue brand-voice job:`, bvErr);
+    }
 
     console.log(`[${job.id}] Copywriting completed for video ${videoId}`);
 
