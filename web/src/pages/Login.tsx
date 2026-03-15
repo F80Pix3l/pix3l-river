@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { GlowingEffect } from '../components/ui/glowing-effect';
+import { WebGLShader } from '../components/ui/web-gl-shader';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -26,14 +27,19 @@ export function Login() {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        background:
-          'radial-gradient(ellipse 70% 60% at 80% 20%, rgba(255,22,53,0.12) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 15% 80%, rgba(161,0,255,0.10) 0%, transparent 55%), #000623',
-      }}
-    >
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 relative">
+      {/* WebGL shader — base layer */}
+      <WebGLShader />
+      {/* Blue gradient overlay — sits on top of shader, under content */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(ellipse 70% 60% at 80% 20%, rgba(255,22,53,0.12) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 15% 80%, rgba(161,0,255,0.10) 0%, transparent 55%), rgba(0,6,35,0.82)',
+          zIndex: 1,
+        }}
+      />
+      <div className="w-full max-w-md relative" style={{ zIndex: 2 }}>
         {/* Wordmark */}
         <div className="text-center mb-10">
           <style>{`
