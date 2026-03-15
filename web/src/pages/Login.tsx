@@ -36,10 +36,22 @@ export function Login() {
       <div className="w-full max-w-md">
         {/* Wordmark */}
         <div className="text-center mb-10">
+          <style>{`
+            @keyframes pulseDot {
+              0%, 100% { box-shadow: 0 0 0 0 rgba(255,22,53,0.5); }
+              50%       { box-shadow: 0 0 0 6px rgba(255,22,53,0); }
+            }
+          `}</style>
           <p
-            className="text-white/35 mb-3 text-xs uppercase"
+            className="text-white/35 mb-3 text-xs uppercase flex items-center justify-center gap-2.5"
             style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.14em' }}
           >
+            <span style={{
+              width: 6, height: 6, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
+              background: 'rgba(255,86,107,0.85)',
+              boxShadow: '0 0 8px rgba(255,22,53,0.4)',
+              animation: 'pulseDot 2.4s ease-in-out infinite',
+            }} />
             Project: Tredstone
           </p>
           <h1
