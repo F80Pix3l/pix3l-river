@@ -136,7 +136,7 @@ export function Dashboard() {
                   return (
                     <li
                       key={video.id}
-                      className="group px-5 py-4 flex items-center justify-between transition-colors duration-150"
+                      className="group px-5 py-4 flex items-center justify-between transition-colors duration-150 motion-reduce:transition-none"
                       style={{ background: isConfirming ? 'rgba(255,22,53,0.04)' : 'transparent' }}
                       onMouseEnter={(e) => { if (!isConfirming) e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
                       onMouseLeave={(e) => { if (!isConfirming) e.currentTarget.style.background = 'transparent'; }}
@@ -172,7 +172,7 @@ export function Dashboard() {
                         {video.status === 'processing' && (
                           <Link
                             to={`/pipeline/${video.id}`}
-                            className="px-3 py-1.5 text-xs font-space font-semibold text-vista-blue rounded-lg transition-all duration-150"
+                            className="px-3 py-1.5 text-xs font-space font-semibold text-vista-blue rounded-lg transition-[color,background-color,border-color,opacity] duration-150 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-4"
                             style={{ background: 'rgba(133,153,255,0.08)', border: '1px solid rgba(133,153,255,0.2)' }}
                           >
                             View Pipeline →
@@ -181,7 +181,7 @@ export function Dashboard() {
                         {video.status === 'completed' && (
                           <Link
                             to={`/review/${video.id}`}
-                            className="px-3 py-1.5 text-xs font-space font-semibold text-white rounded-lg transition-all duration-150"
+                            className="px-3 py-1.5 text-xs font-space font-semibold text-white rounded-lg transition-[background-color,box-shadow,opacity] duration-150 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-4"
                             style={{ background: '#FF1635', boxShadow: '0 2px 10px rgba(255,22,53,0.3)' }}
                             onMouseEnter={(e) => (e.currentTarget.style.background = '#e01030')}
                             onMouseLeave={(e) => (e.currentTarget.style.background = '#FF1635')}
@@ -199,7 +199,7 @@ export function Dashboard() {
                             <button
                               onClick={() => deleteVideo(video)}
                               disabled={isDeleting}
-                              className="px-3 py-1.5 text-xs font-space font-semibold text-white rounded-lg transition-all duration-150 disabled:opacity-50"
+                              className="px-3 py-1.5 text-xs font-space font-semibold text-white rounded-lg transition-[background-color,opacity] duration-150 motion-reduce:transition-none disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-4"
                               style={{ background: '#FF1635' }}
                               onMouseEnter={(e) => (e.currentTarget.style.background = '#e01030')}
                               onMouseLeave={(e) => (e.currentTarget.style.background = '#FF1635')}
@@ -209,7 +209,7 @@ export function Dashboard() {
                             <button
                               onClick={() => setConfirmDeleteId(null)}
                               disabled={isDeleting}
-                              className="px-3 py-1.5 text-xs font-space font-semibold rounded-lg transition-all duration-150"
+                              className="px-3 py-1.5 text-xs font-space font-semibold rounded-lg transition-[color,background-color,border-color,opacity] duration-150 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-4"
                               style={{ color: 'rgba(255,255,255,0.50)', border: '1px solid rgba(255,255,255,0.10)' }}
                               onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
                               onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.50)'; e.currentTarget.style.background = 'transparent'; }}
@@ -220,7 +220,7 @@ export function Dashboard() {
                         ) : (
                           <button
                             onClick={() => setConfirmDeleteId(video.id)}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150 opacity-0 group-hover:opacity-100"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg transition-[color,background-color,opacity] duration-150 motion-reduce:transition-none opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-2"
                             style={{ color: 'rgba(255,255,255,0.25)' }}
                             onMouseEnter={(e) => { e.currentTarget.style.color = '#FF1635'; e.currentTarget.style.background = 'rgba(255,22,53,0.08)'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.25)'; e.currentTarget.style.background = 'transparent'; }}

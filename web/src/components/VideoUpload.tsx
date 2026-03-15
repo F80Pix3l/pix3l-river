@@ -105,7 +105,7 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
         onDrop={handleDrop}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
-        className="relative rounded-card p-12 text-center transition-all duration-300"
+        className="relative rounded-card p-12 text-center transition-[border-color,background-color,opacity] duration-300 motion-reduce:transition-none"
         style={{
           border: isDragging
             ? '2px dashed rgba(133,153,255,0.7)'
@@ -145,7 +145,7 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
             </div>
             <div className="w-full rounded-full h-1.5" style={{ background: 'rgba(255,255,255,0.08)' }}>
               <div
-                className="h-1.5 rounded-full transition-all duration-300"
+                className="h-1.5 rounded-full transition-[width] duration-300 motion-reduce:transition-none"
                 style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #FF1635, #A100FF)' }}
               />
             </div>
@@ -177,7 +177,7 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
 
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-6 py-2.5 text-white text-sm font-space font-semibold rounded-full transition-all duration-200 active:scale-[0.97]"
+              className="px-6 py-2.5 text-white text-sm font-space font-semibold rounded-full transition-[background-color,box-shadow,color,border-color] duration-200 motion-reduce:transition-none active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-4"
               style={{
                 background: selectedFile ? 'rgba(133,153,255,0.12)' : '#FF1635',
                 border: selectedFile ? '1px solid rgba(133,153,255,0.3)' : 'none',
@@ -224,7 +224,7 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
                 <button
                   key={platform}
                   onClick={() => togglePlatform(platform)}
-                  className="flex-1 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.97]"
+                  className="flex-1 px-4 py-3 rounded-lg transition-[background-color,border-color,color] duration-200 motion-reduce:transition-none active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-2"
                   style={{
                     background: active ? cfg.activeBg : 'rgba(0,9,71,0.4)',
                     border: `1px solid ${active ? cfg.activeBorder : 'rgba(255,255,255,0.08)'}`,
@@ -244,7 +244,7 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
         <div className="mt-6">
           <button
             onClick={() => uploadVideo(selectedFile)}
-            className="w-full py-4 text-white rounded-lg font-space font-bold text-base transition-all duration-200 active:scale-[0.98]"
+            className="w-full py-4 text-white rounded-lg font-space font-bold text-base transition-[box-shadow,opacity] duration-200 motion-reduce:transition-none active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-4"
             style={{
               background: 'linear-gradient(135deg, #FF1635 0%, #A100FF 100%)',
               boxShadow: '0 4px 24px rgba(255,22,53,0.35)',
