@@ -1,9 +1,14 @@
-import { Worker } from 'bullmq';
+import { Worker, Queue } from 'bullmq';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import Replicate from 'replicate';
 import { Resend } from 'resend';
 import 'dotenv/config';
+const brandVoiceQueue = new Queue('brand-voice', {
+    connection: {
+        url: process.env.UPSTASH_REDIS_URL,
+    },
+});
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
@@ -176,6 +181,7 @@ async function processCopywriting(job) {
             throw new Error(`Transcript not found for video ${videoId}: ${transcriptError?.message}`);
         }
         const transcript = transcriptRow.content;
+        await supabase.from('pipeline_status').update({ progress: 15 }).eq('job_id', videoId).eq('agent_id', 2);
         // Generate copy with Claude
         const response = await anthropic.messages.create({
             model: 'claude-sonnet-4-6',
@@ -200,6 +206,7 @@ async function processCopywriting(job) {
         catch {
             throw new Error(`Failed to parse Claude response as JSON: ${rawContent.text.slice(0, 200)}`);
         }
+        await supabase.from('pipeline_status').update({ progress: 45 }).eq('job_id', videoId).eq('agent_id', 2);
         // Build platform content array, filtered to selected platforms
         const allPlatforms = [
             {
@@ -238,10 +245,12 @@ async function processCopywriting(job) {
                 throw new Error(`Failed to save ${content.platform} content: ${insertError.message}`);
             }
         }
+        await supabase.from('pipeline_status').update({ progress: 60 }).eq('job_id', videoId).eq('agent_id', 2);
         console.log(`[${job.id}] Text content saved. Generating thumbnails...`);
         // Generate thumbnails sequentially to avoid Replicate burst rate limit
         const thumbnailResults = [];
-        for (const content of platforms) {
+        for (let i = 0; i < platforms.length; i++) {
+            const content = platforms[i];
             const thumbnailUrl = await generateAndUploadThumbnail(videoId, content.platform, content.title);
             if (thumbnailUrl) {
                 await supabase
@@ -252,6 +261,8 @@ async function processCopywriting(job) {
                 console.log(`[${job.id}] Thumbnail uploaded for ${content.platform}`);
             }
             thumbnailResults.push({ platform: content.platform, thumbnailUrl });
+            const thumbProgress = 60 + Math.round(((i + 1) / platforms.length) * 35);
+            await supabase.from('pipeline_status').update({ progress: thumbProgress }).eq('job_id', videoId).eq('agent_id', 2);
         }
         const thumbnailsSaved = thumbnailResults.filter((r) => r.thumbnailUrl).length;
         console.log(`[${job.id}] ${thumbnailsSaved}/${platforms.length} thumbnails generated`);
@@ -271,6 +282,19 @@ async function processCopywriting(job) {
             .update({ status: 'completed' })
             .eq('id', videoId);
         await sendCompletionEmail(videoId);
+        // Enqueue brand voice job
+        try {
+            const bvJob = await brandVoiceQueue.add('apply-brand-voice', { videoId }, {
+                attempts: 3,
+                backoff: { type: 'exponential', delay: 5000 },
+                removeOnComplete: { count: 100 },
+                removeOnFail: { count: 500 },
+            });
+            console.log(`[${job.id}] Enqueued brand-voice job ${bvJob.id} for video ${videoId}`);
+        }
+        catch (bvErr) {
+            console.error(`[${job.id}] Failed to enqueue brand-voice job:`, bvErr);
+        }
         console.log(`[${job.id}] Copywriting completed for video ${videoId}`);
         return { success: true, platforms: selectedPlatforms, thumbnailsSaved };
     }
@@ -293,29 +317,48 @@ async function processCopywriting(job) {
         throw error;
     }
 }
-const worker = new Worker('copywriting', processCopywriting, {
-    connection: {
-        url: process.env.UPSTASH_REDIS_URL,
-    },
-    concurrency: 3,
-});
-worker.on('completed', (job) => {
-    console.log(`Job ${job.id} completed successfully`);
-});
-worker.on('failed', (job, err) => {
-    console.error(`Job ${job?.id} failed:`, err.message);
-});
-console.log('Copywriting worker started');
-console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? process.env.SUPABASE_URL : 'UNSET');
-// Connectivity test
-fetch(process.env.SUPABASE_URL + '/rest/v1/', {
-    headers: { apikey: process.env.SUPABASE_SERVICE_KEY }
-}).then(r => console.log('Supabase connectivity OK:', r.status))
-    .catch((e) => {
-    console.error('Supabase connectivity FAILED:', e.message, '| cause:', e.cause?.message ?? e.cause);
-});
-process.on('SIGTERM', async () => {
-    console.log('Shutting down worker...');
-    await worker.close();
-    process.exit(0);
+console.log('Copywriting worker starting...');
+console.log('SUPABASE_URL:', process.env.SUPABASE_URL ?? 'UNSET');
+async function startWorker() {
+    // Wait for Supabase to be reachable before accepting jobs
+    const maxAttempts = 5;
+    for (let i = 1; i <= maxAttempts; i++) {
+        try {
+            const res = await fetch(process.env.SUPABASE_URL + '/rest/v1/', {
+                headers: { apikey: process.env.SUPABASE_SERVICE_KEY },
+            });
+            console.log(`Supabase connectivity OK: ${res.status}`);
+            break;
+        }
+        catch (e) {
+            console.error(`Supabase connectivity check ${i}/${maxAttempts} failed:`, e.message, '| cause:', e.cause?.message ?? e.cause);
+            if (i === maxAttempts) {
+                console.error('Supabase unreachable after all attempts, exiting');
+                process.exit(1);
+            }
+            await new Promise((resolve) => setTimeout(resolve, 3000 * i));
+        }
+    }
+    const worker = new Worker('copywriting', processCopywriting, {
+        connection: {
+            url: process.env.UPSTASH_REDIS_URL,
+        },
+        concurrency: 3,
+    });
+    worker.on('completed', (job) => {
+        console.log(`Job ${job.id} completed successfully`);
+    });
+    worker.on('failed', (job, err) => {
+        console.error(`Job ${job?.id} failed:`, err.message);
+    });
+    process.on('SIGTERM', async () => {
+        console.log('Shutting down worker...');
+        await worker.close();
+        process.exit(0);
+    });
+    console.log('Copywriting worker ready');
+}
+startWorker().catch((err) => {
+    console.error('Worker failed to start:', err);
+    process.exit(1);
 });
