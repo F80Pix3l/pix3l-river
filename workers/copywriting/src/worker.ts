@@ -237,6 +237,8 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
 
     const transcript = transcriptRow.content as string;
 
+    await supabase.from('pipeline_status').update({ progress: 15 }).eq('job_id', videoId).eq('agent_id', 2);
+
     // Generate copy with Claude
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -262,6 +264,8 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
     } catch {
       throw new Error(`Failed to parse Claude response as JSON: ${rawContent.text.slice(0, 200)}`);
     }
+
+    await supabase.from('pipeline_status').update({ progress: 45 }).eq('job_id', videoId).eq('agent_id', 2);
 
     // Build platform content array, filtered to selected platforms
     const allPlatforms: Array<{
@@ -312,11 +316,13 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
       }
     }
 
+    await supabase.from('pipeline_status').update({ progress: 60 }).eq('job_id', videoId).eq('agent_id', 2);
     console.log(`[${job.id}] Text content saved. Generating thumbnails...`);
 
     // Generate thumbnails sequentially to avoid Replicate burst rate limit
     const thumbnailResults: { platform: string; thumbnailUrl: string | null }[] = [];
-    for (const content of platforms) {
+    for (let i = 0; i < platforms.length; i++) {
+      const content = platforms[i];
       const thumbnailUrl = await generateAndUploadThumbnail(
         videoId,
         content.platform,
@@ -334,6 +340,8 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
       }
 
       thumbnailResults.push({ platform: content.platform, thumbnailUrl });
+      const thumbProgress = 60 + Math.round(((i + 1) / platforms.length) * 35);
+      await supabase.from('pipeline_status').update({ progress: thumbProgress }).eq('job_id', videoId).eq('agent_id', 2);
     }
 
     const thumbnailsSaved = thumbnailResults.filter((r) => r.thumbnailUrl).length;

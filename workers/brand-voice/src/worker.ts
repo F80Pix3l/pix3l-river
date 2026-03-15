@@ -113,6 +113,8 @@ async function processBrandVoice(job: Job<BrandVoiceJobData>) {
       throw new Error(`Video not found: ${videoError?.message}`);
     }
 
+    await supabase.from('pipeline_status').update({ progress: 20 }).eq('job_id', videoId).eq('agent_id', 3);
+
     // Get brand voice profile for the user
     const { data: profile } = await supabase
       .from('brand_voice_profiles')
@@ -144,6 +146,7 @@ async function processBrandVoice(job: Job<BrandVoiceJobData>) {
       throw new Error(`No generated content found for video ${videoId}`);
     }
 
+    await supabase.from('pipeline_status').update({ progress: 35 }).eq('job_id', videoId).eq('agent_id', 3);
     console.log(`[${job.id}] Rewriting ${contentRows.length} platforms in brand voice`);
 
     // Call Claude to rewrite all content
@@ -171,6 +174,8 @@ async function processBrandVoice(job: Job<BrandVoiceJobData>) {
     } catch {
       throw new Error(`Failed to parse Claude response: ${rawContent.text.slice(0, 200)}`);
     }
+
+    await supabase.from('pipeline_status').update({ progress: 75 }).eq('job_id', videoId).eq('agent_id', 3);
 
     // Save brand voice content for each platform
     for (const row of contentRows) {

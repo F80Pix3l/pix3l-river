@@ -124,6 +124,12 @@ export function Pipeline() {
 
   return (
     <Layout pageTitle="Pipeline">
+      <style>{`
+        @keyframes river-shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
       <div className="p-8 max-w-5xl">
         {/* Header row */}
         <div className="flex items-center justify-between mb-8">
@@ -349,18 +355,31 @@ export function Pipeline() {
                           <span className="text-xs text-white/40" style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.08em' }}>
                             PROGRESS
                           </span>
-                          <span className="text-xs text-white/60 font-mono">{activeStatus.progress}%</span>
+                          <span className="text-xs text-white/60 font-mono">
+                            {activeStatus.status === 'running' && activeStatus.progress === 0 ? 'Working...' : `${activeStatus.progress}%`}
+                          </span>
                         </div>
-                        <div className="w-full h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                          <div
-                            className="h-1.5 rounded-full transition-[width] duration-500 motion-reduce:transition-none"
-                            style={{
-                              width: `${activeStatus.progress}%`,
-                              background: activeStatus.status === 'done'
-                                ? 'linear-gradient(90deg, #8599FF, #A100FF)'
-                                : 'linear-gradient(90deg, #FF1635, #FF1673)',
-                            }}
-                          />
+                        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                          {activeStatus.status === 'running' && activeStatus.progress === 0 ? (
+                            <div
+                              className="h-full w-full"
+                              style={{
+                                background: 'linear-gradient(90deg, transparent 0%, #FF1635 40%, #FF1673 60%, transparent 100%)',
+                                backgroundSize: '200% 100%',
+                                animation: 'river-shimmer 1.4s ease-in-out infinite',
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="h-1.5 rounded-full transition-[width] duration-500 motion-reduce:transition-none"
+                              style={{
+                                width: `${activeStatus.progress}%`,
+                                background: activeStatus.status === 'done'
+                                  ? 'linear-gradient(90deg, #8599FF, #A100FF)'
+                                  : 'linear-gradient(90deg, #FF1635, #FF1673)',
+                              }}
+                            />
+                          )}
                         </div>
                       </div>
 
