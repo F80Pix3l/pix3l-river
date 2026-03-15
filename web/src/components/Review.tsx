@@ -142,7 +142,7 @@ export function Review() {
       {/* Toast */}
       {toast && (
         <div
-          className="fixed top-5 right-5 z-50 px-5 py-3 rounded-lg text-sm font-medium shadow-xl transition-all duration-300"
+          className="fixed top-5 right-5 z-50 px-5 py-3 rounded-lg text-sm font-medium shadow-xl transition-[opacity,transform] duration-300 motion-reduce:transition-none"
           style={{
             background: toast.type === 'success' ? 'rgba(0,9,71,0.95)' : 'rgba(255,22,53,0.15)',
             border: `1px solid ${toast.type === 'success' ? 'rgba(133,153,255,0.3)' : 'rgba(255,22,53,0.3)'}`,
@@ -173,7 +173,7 @@ export function Review() {
               <button
                 key={platform}
                 onClick={() => { setActivePlatform(platform); setIsEditing(false); }}
-                className="px-4 py-2 rounded-md text-sm font-space font-semibold transition-all duration-200 flex items-center gap-2"
+                className="px-4 py-2 rounded-md text-sm font-space font-semibold transition-[background-color,color,border-color] duration-200 motion-reduce:transition-none flex items-center gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-2"
                 style={{
                   background: isActive ? 'rgba(255,255,255,0.06)' : 'transparent',
                   color: isActive ? cfg.color : 'rgba(255,255,255,0.40)',
@@ -379,16 +379,16 @@ export function Review() {
                   <>
                     <button
                       onClick={handleSaveEdit}
-                      className="w-full py-3 text-white text-sm font-space font-semibold rounded-lg transition-all duration-200 active:scale-[0.97]"
+                      className="w-full py-3 text-white text-sm font-space font-semibold rounded-lg transition-[background-color,box-shadow] duration-200 motion-reduce:transition-none active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-2"
                       style={{ background: '#8599FF', boxShadow: '0 4px 16px rgba(133,153,255,0.25)' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = '#7080f0')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = '#8599FF')}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#7080f0'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(133,153,255,0.35)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = '#8599FF'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(133,153,255,0.25)'; }}
                     >
                       Save Changes
                     </button>
                     <button
                       onClick={() => setIsEditing(false)}
-                      className="w-full py-3 text-sm font-space font-medium rounded-lg transition-all duration-200"
+                      className="w-full py-3 text-sm font-space font-medium rounded-lg transition-[color,background-color,border-color] duration-200 motion-reduce:transition-none active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-2"
                       style={{ color: 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.10)' }}
                       onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.background = 'transparent'; }}
@@ -401,16 +401,16 @@ export function Review() {
                     <button
                       onClick={handleApprove}
                       disabled={activeContent.status === 'approved'}
-                      className="w-full py-3 text-white text-sm font-space font-semibold rounded-lg transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full py-3 text-white text-sm font-space font-semibold rounded-lg transition-[background-color,box-shadow] duration-200 motion-reduce:transition-none active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-2"
                       style={{ background: '#FF1635', boxShadow: '0 4px 16px rgba(255,22,53,0.3)' }}
-                      onMouseEnter={(e) => { if (activeContent.status !== 'approved') e.currentTarget.style.background = '#e01030'; }}
-                      onMouseLeave={(e) => { if (activeContent.status !== 'approved') e.currentTarget.style.background = '#FF1635'; }}
+                      onMouseEnter={(e) => { if (activeContent.status !== 'approved') { e.currentTarget.style.background = '#e01030'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(255,22,53,0.45)'; } }}
+                      onMouseLeave={(e) => { if (activeContent.status !== 'approved') { e.currentTarget.style.background = '#FF1635'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(255,22,53,0.3)'; } }}
                     >
                       {activeContent.status === 'approved' ? 'Approved ✓' : 'Approve'}
                     </button>
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="w-full py-3 text-sm font-space font-semibold rounded-lg transition-all duration-200"
+                      className="w-full py-3 text-sm font-space font-semibold rounded-lg transition-[color,background-color,border-color] duration-200 motion-reduce:transition-none active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-2"
                       style={{ color: 'rgba(255,255,255,0.70)', border: '1px solid rgba(255,255,255,0.12)' }}
                       onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.22)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.70)'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
@@ -420,10 +420,10 @@ export function Review() {
                     <button
                       onClick={handleReject}
                       disabled={activeContent.status === 'rejected'}
-                      className="w-full py-3 text-sm font-space font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full py-3 text-sm font-space font-medium rounded-lg transition-[color,background-color,border-color] duration-200 motion-reduce:transition-none active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-2"
                       style={{ color: 'rgba(255,22,53,0.7)', border: '1px solid rgba(255,22,53,0.15)' }}
-                      onMouseEnter={(e) => { if (activeContent.status !== 'rejected') { e.currentTarget.style.color = '#FF1635'; e.currentTarget.style.background = 'rgba(255,22,53,0.06)'; } }}
-                      onMouseLeave={(e) => { if (activeContent.status !== 'rejected') { e.currentTarget.style.color = 'rgba(255,22,53,0.7)'; e.currentTarget.style.background = 'transparent'; } }}
+                      onMouseEnter={(e) => { if (activeContent.status !== 'rejected') { e.currentTarget.style.color = '#FF1635'; e.currentTarget.style.background = 'rgba(255,22,53,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,22,53,0.3)'; } }}
+                      onMouseLeave={(e) => { if (activeContent.status !== 'rejected') { e.currentTarget.style.color = 'rgba(255,22,53,0.7)'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255,22,53,0.15)'; } }}
                     >
                       {activeContent.status === 'rejected' ? 'Rejected ✕' : 'Reject'}
                     </button>

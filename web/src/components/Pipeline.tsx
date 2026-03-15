@@ -153,10 +153,10 @@ export function Pipeline() {
             {allDone && (
               <Link
                 to={`/review/${jobId}`}
-                className="px-4 py-2 text-sm font-space font-semibold text-white rounded-lg transition-all duration-200"
+                className="px-4 py-2 text-sm font-space font-semibold text-white rounded-lg transition-[background-color,box-shadow] duration-200 motion-reduce:transition-none active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-4"
                 style={{ background: '#FF1635', boxShadow: '0 4px 16px rgba(255,22,53,0.3)' }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#e01030')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = '#FF1635')}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#e01030'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(255,22,53,0.45)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#FF1635'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(255,22,53,0.3)'; }}
               >
                 Review Content →
               </Link>
@@ -168,7 +168,7 @@ export function Pipeline() {
         <div className="mb-8">
           <div className="w-full h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
             <div
-              className="h-1 rounded-full transition-all duration-500"
+              className="h-1 rounded-full transition-[width] duration-500 motion-reduce:transition-none"
               style={{
                 width: `${(completedCount / AGENTS.length) * 100}%`,
                 background: 'linear-gradient(90deg, #FF1635, #A100FF)',
@@ -189,76 +189,119 @@ export function Pipeline() {
                   Agents
                 </p>
               </div>
-              <ul className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
-                {AGENTS.map((agent) => {
-                  const status = agentStatuses.find((s) => s.agentId === agent.id);
-                  const isActive = activeAgentId === agent.id;
-                  const isRunning = status?.status === 'running';
-                  const isDone = status?.status === 'done';
-                  const isFailed = status?.status === 'failed';
+              {/* Connector line runs behind all step indicators */}
+              <div className="relative">
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    left: 27,
+                    top: 0,
+                    bottom: 0,
+                    width: 2,
+                    background: 'rgba(255,255,255,0.05)',
+                    zIndex: 0,
+                  }}
+                />
+                <ul className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+                  {AGENTS.map((agent) => {
+                    const status = agentStatuses.find((s) => s.agentId === agent.id);
+                    const isActive = activeAgentId === agent.id;
+                    const isRunning = status?.status === 'running';
+                    const isDone = status?.status === 'done';
+                    const isFailed = status?.status === 'failed';
 
-                  return (
-                    <li
-                      key={agent.id}
-                      onClick={() => setActiveAgentId(agent.id)}
-                      className="px-4 py-3 cursor-pointer transition-all duration-150 flex items-center gap-3"
-                      style={{
-                        background: isActive
-                          ? isFailed ? 'rgba(255,22,53,0.08)' : 'rgba(255,22,53,0.06)'
-                          : 'transparent',
-                        borderLeft: isActive ? '2px solid #FF1635' : '2px solid transparent',
-                      }}
-                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
-                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      {/* Status indicator */}
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold font-space"
+                    return (
+                      <li
+                        key={agent.id}
+                        onClick={() => setActiveAgentId(agent.id)}
+                        className="px-4 py-3 cursor-pointer transition-[background-color,border-color] duration-150 motion-reduce:transition-none flex items-center gap-3 relative focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-[-2px]"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveAgentId(agent.id); }}
                         style={{
-                          background: isDone
-                            ? 'rgba(133,153,255,0.12)'
-                            : isRunning
-                            ? 'rgba(255,22,53,0.15)'
-                            : isFailed
-                            ? 'rgba(255,22,53,0.20)'
-                            : 'rgba(255,255,255,0.04)',
-                          color: isDone ? '#8599FF' : isRunning ? '#FF1635' : isFailed ? '#FF1635' : 'rgba(255,255,255,0.25)',
+                          background: isActive
+                            ? isFailed ? 'rgba(255,22,53,0.08)' : 'rgba(255,22,53,0.06)'
+                            : 'transparent',
+                          borderLeft: isActive ? '2px solid #FF1635' : '2px solid transparent',
                         }}
+                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = isActive ? (isFailed ? 'rgba(255,22,53,0.08)' : 'rgba(255,22,53,0.06)') : 'transparent'; }}
                       >
-                        {isDone ? '✓' : isRunning ? (
-                          <span className="w-1.5 h-1.5 rounded-full bg-big-red" style={{ animation: 'pulse 1s infinite' }} />
-                        ) : isFailed ? '✕' : agent.id}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="text-sm font-medium truncate"
-                          style={{ color: isDone ? 'rgba(255,255,255,0.7)' : isRunning ? '#fff' : isFailed ? '#FF1635' : 'rgba(255,255,255,0.40)', fontFamily: '"Inter", sans-serif' }}
-                        >
-                          {agent.name}
-                        </p>
-                      </div>
-
-                      {isRunning && (
+                        {/* Status indicator -- z-index 1 overlays the connector line */}
                         <div
-                          className="text-xs px-1.5 py-0.5 rounded"
-                          style={{ background: 'rgba(255,22,53,0.15)', color: '#FF1635', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px' }}
+                          className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold font-space"
+                          style={{
+                            position: 'relative',
+                            zIndex: 1,
+                            background: isDone
+                              ? 'rgba(133,153,255,0.15)'
+                              : isRunning
+                              ? 'rgba(255,22,53,0.18)'
+                              : isFailed
+                              ? 'rgba(255,22,53,0.22)'
+                              : 'rgba(0,9,71,0.8)',
+                            border: isDone
+                              ? '1px solid rgba(133,153,255,0.3)'
+                              : isRunning
+                              ? '1px solid rgba(255,22,53,0.35)'
+                              : isFailed
+                              ? '1px solid rgba(255,22,53,0.35)'
+                              : '1px solid rgba(255,255,255,0.08)',
+                            color: isDone ? '#8599FF' : isRunning ? '#FF1635' : isFailed ? '#FF1635' : 'rgba(255,255,255,0.30)',
+                          }}
                         >
-                          LIVE
+                          {isDone ? (
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                              <path d="M2 5l2.5 2.5L8 3" stroke="#8599FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          ) : isRunning ? (
+                            <span className="w-1.5 h-1.5 rounded-full bg-big-red" style={{ animation: 'pulse 1s infinite' }} />
+                          ) : isFailed ? (
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                              <path d="M3 3l4 4M7 3l-4 4" stroke="#FF1635" strokeWidth="1.5" strokeLinecap="round" />
+                            </svg>
+                          ) : (
+                            <span style={{ fontSize: '10px' }}>{agent.id}</span>
+                          )}
                         </div>
-                      )}
-                      {isFailed && (
-                        <div
-                          className="text-xs px-1.5 py-0.5 rounded"
-                          style={{ background: 'rgba(255,22,53,0.15)', color: '#FF1635', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px' }}
-                        >
-                          ERR
+
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="text-sm font-medium truncate"
+                            style={{
+                              color: isDone
+                                ? 'rgba(255,255,255,0.65)'
+                                : isRunning ? '#fff'
+                                : isFailed ? '#FF1635'
+                                : 'rgba(255,255,255,0.35)',
+                              fontFamily: '"Inter", sans-serif',
+                            }}
+                          >
+                            {agent.name}
+                          </p>
                         </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+
+                        {isRunning && (
+                          <div
+                            className="text-xs px-1.5 py-0.5 rounded"
+                            style={{ background: 'rgba(255,22,53,0.12)', color: '#FF1635', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', letterSpacing: '0.06em' }}
+                          >
+                            LIVE
+                          </div>
+                        )}
+                        {isFailed && (
+                          <div
+                            className="text-xs px-1.5 py-0.5 rounded"
+                            style={{ background: 'rgba(255,22,53,0.12)', color: '#FF1635', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', letterSpacing: '0.06em' }}
+                          >
+                            ERR
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             </GlowCard>
           </div>
 
@@ -311,7 +354,7 @@ export function Pipeline() {
                         </div>
                         <div className="w-full h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
                           <div
-                            className="h-1.5 rounded-full transition-all duration-500"
+                            className="h-1.5 rounded-full transition-[width] duration-500 motion-reduce:transition-none"
                             style={{
                               width: `${activeStatus.progress}%`,
                               background: activeStatus.status === 'done'
