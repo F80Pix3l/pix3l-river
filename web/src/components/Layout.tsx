@@ -60,71 +60,106 @@ export function Layout({ children, pageTitle }: LayoutProps) {
 
   return (
     <div className="flex min-h-screen" style={{ background: '#000623' }}>
-      {/* Sidebar */}
+      {/* Sidebar
+          md (768px+): full width 240px with labels
+          sm (< 768px): icon-only 56px strip */}
       <aside
-        className="w-60 flex flex-col flex-shrink-0"
+        className="w-14 md:w-60 flex flex-col flex-shrink-0"
         style={{
           background: '#000947',
           borderRight: '1px solid rgba(255,255,255,0.06)',
         }}
       >
         {/* Wordmark */}
-        <div className="px-6 py-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center gap-2">
+        <div
+          className="px-3 md:px-6 py-6 flex items-start"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Gradient mark -- always visible */}
             <div
-              className="w-2 h-6 rounded-sm"
+              className="w-2 h-6 rounded-sm flex-shrink-0"
               style={{ background: 'linear-gradient(180deg, #FF1635 0%, #A100FF 100%)' }}
             />
-            <h1 className="text-xl font-space font-bold text-white" style={{ letterSpacing: '-0.02em' }}>
-              RIVER
-            </h1>
+            <div className="hidden md:block min-w-0">
+              <h1 className="text-xl font-space font-bold text-white" style={{ letterSpacing: '-0.02em', lineHeight: 1 }}>
+                RIVER
+              </h1>
+              <p
+                className="text-white/35 mt-1 text-xs uppercase"
+                style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.10em' }}
+              >
+                Pix3l
+              </p>
+            </div>
           </div>
-          <p
-            className="text-white/35 mt-1.5 text-xs uppercase"
-            style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.10em' }}
-          >
-            Pix3l
-          </p>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4">
+        <nav className="flex-1 px-1.5 md:px-3 py-4" aria-label="Main navigation">
           <p
-            className="text-white/25 text-xs uppercase px-3 mb-3"
+            className="hidden md:block text-white/25 text-xs uppercase px-3 mb-3"
             style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.12em' }}
           >
             Workspace
           </p>
-          <ul className="space-y-1">
+          <ul className="space-y-0.5 md:space-y-1">
             {navItems.map((item) => {
               const isActive = activeId === item.id;
               const isDisabled = item.disabled && !isActive;
+
+              const linkStyle = {
+                color: isDisabled ? 'rgba(255,255,255,0.20)' : isActive ? '#fff' : 'rgba(255,255,255,0.50)',
+                background: isActive ? 'rgba(255,22,53,0.08)' : 'transparent',
+                borderLeft: isActive ? '2px solid #FF1635' : '2px solid transparent',
+                fontFamily: '"Inter", sans-serif',
+                cursor: isDisabled ? 'default' : 'pointer',
+                pointerEvents: isDisabled ? 'none' as const : 'auto' as const,
+              };
+
+              const iconColor = isDisabled
+                ? 'rgba(255,255,255,0.15)'
+                : isActive
+                ? '#FF1635'
+                : 'rgba(255,255,255,0.40)';
+
               const content = (
-                <span
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200"
-                  style={{
-                    color: isDisabled ? 'rgba(255,255,255,0.20)' : isActive ? '#fff' : 'rgba(255,255,255,0.50)',
-                    background: isActive ? 'rgba(255,22,53,0.08)' : 'transparent',
-                    borderLeft: isActive ? '2px solid #FF1635' : '2px solid transparent',
-                    fontFamily: '"Inter", sans-serif',
-                    cursor: isDisabled ? 'default' : 'pointer',
-                  }}
-                >
-                  <span style={{ color: isDisabled ? 'rgba(255,255,255,0.15)' : isActive ? '#FF1635' : 'rgba(255,255,255,0.40)' }}>
-                    {item.icon}
-                  </span>
-                  {item.label}
-                </span>
+                <>
+                  <span className="flex-shrink-0" style={{ color: iconColor }}>{item.icon}</span>
+                  <span className="hidden md:inline truncate">{item.label}</span>
+                </>
               );
 
               return (
                 <li key={item.id}>
                   {item.href && !isDisabled ? (
-                    <Link to={item.href} className="block hover:opacity-90">
+                    <Link
+                      to={item.href}
+                      className="w-full flex items-center justify-center md:justify-start gap-3 px-2 md:px-3 py-2.5 rounded-lg text-sm font-medium transition-[background-color,color,border-left-color] duration-150 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-2"
+                      style={linkStyle}
+                      onMouseEnter={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                          e.currentTarget.style.color = 'rgba(255,255,255,0.80)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'rgba(255,255,255,0.50)';
+                        }
+                      }}
+                    >
                       {content}
                     </Link>
                   ) : (
-                    <div>{content}</div>
+                    <div
+                      className="w-full flex items-center justify-center md:justify-start gap-3 px-2 md:px-3 py-2.5 rounded-lg text-sm font-medium"
+                      style={linkStyle}
+                      aria-disabled="true"
+                    >
+                      {content}
+                    </div>
                   )}
                 </li>
               );
@@ -132,40 +167,49 @@ export function Layout({ children, pageTitle }: LayoutProps) {
           </ul>
         </nav>
 
-        {/* User Section */}
-        <div className="px-3 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center gap-3 px-3 py-2 mb-2">
+        {/* User section */}
+        <div className="px-1.5 md:px-3 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          {/* Avatar + email row */}
+          <div className="flex items-center justify-center md:justify-start gap-3 px-1.5 md:px-3 py-2 mb-1">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold font-space flex-shrink-0"
-              style={{ background: 'rgba(133,153,255,0.15)', color: '#8599FF' }}
+              style={{ background: 'rgba(133,153,255,0.15)', color: '#8599FF', border: '1px solid rgba(133,153,255,0.2)' }}
             >
               {initials}
             </div>
-            <p className="text-xs text-white/55 truncate flex-1" style={{ fontFamily: '"Inter", sans-serif' }}>
+            <p className="hidden md:block text-xs text-white/50 truncate flex-1" style={{ fontFamily: '"Inter", sans-serif' }}>
               {user?.email}
             </p>
           </div>
           <button
             onClick={signOut}
-            className="w-full px-3 py-2 text-xs text-white/40 hover:text-white rounded-lg transition-colors duration-200 text-left"
+            className="w-full flex items-center justify-center md:justify-start px-2 md:px-3 py-2 text-xs text-white/40 rounded-lg transition-[color,background-color] duration-200 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-2"
             style={{ fontFamily: '"Inter", sans-serif' }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.40)'; e.currentTarget.style.background = 'transparent'; }}
           >
-            Sign out
+            <span className="hidden md:inline">Sign out</span>
+            {/* Mobile: show a log-out icon */}
+            <svg className="md:hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
           </button>
         </div>
       </aside>
 
-      {/* Main */}
+      {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
+        {/* Header -- 64px height per branding spec */}
         <header
-          className="h-14 flex items-center justify-between px-8 flex-shrink-0"
+          className="h-16 flex items-center justify-between px-6 md:px-8 flex-shrink-0"
           style={{
             background: 'rgba(0,9,71,0.6)',
             backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
             borderBottom: '1px solid rgba(255,255,255,0.06)',
+            boxShadow: '0 1px 0 rgba(255,255,255,0.04)',
           }}
         >
           <h2
@@ -174,15 +218,17 @@ export function Layout({ children, pageTitle }: LayoutProps) {
           >
             {pageTitle}
           </h2>
+          {/* Avatar -- shown in header on all breakpoints for identity context */}
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold font-space"
-            style={{ background: 'rgba(133,153,255,0.15)', color: '#8599FF' }}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold font-space flex-shrink-0"
+            style={{ background: 'rgba(133,153,255,0.15)', color: '#8599FF', border: '1px solid rgba(133,153,255,0.2)' }}
+            title={user?.email}
           >
             {initials}
           </div>
         </header>
 
-        {/* Content */}
+        {/* Page content */}
         <main className="flex-1 overflow-auto">
           {children}
         </main>
