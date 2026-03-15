@@ -47,25 +47,59 @@ export function Signup() {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        background:
-          'radial-gradient(ellipse 70% 60% at 80% 20%, rgba(255,22,53,0.12) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 15% 80%, rgba(161,0,255,0.10) 0%, transparent 55%), #000623',
-      }}
-    >
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 relative" style={{ background: '#00061a' }}>
+      {/* Dot grid */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(133,153,255,0.14) 1px, transparent 1px)',
+          backgroundSize: '36px 36px',
+          maskImage: 'radial-gradient(ellipse 90% 80% at 50% 50%, black 30%, transparent 100%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 90% 80% at 50% 50%, black 30%, transparent 100%)',
+          zIndex: 3,
+        }}
+      />
+      <div className="w-full max-w-md relative" style={{ zIndex: 4 }}>
         {/* Wordmark */}
         <div className="text-center mb-10">
+          <style>{`
+            @keyframes pulseDot {
+              0%, 100% { box-shadow: 0 0 0 0 rgba(255,22,53,0.5); }
+              50%       { box-shadow: 0 0 0 6px rgba(255,22,53,0); }
+            }
+            @keyframes gradientShift {
+              0%   { background-position: 0% 50%; }
+              50%  { background-position: 100% 50%; }
+              100% { background-position: 0% 50%; }
+            }
+          `}</style>
           <p
-            className="text-white/35 mb-3 text-xs uppercase"
+            className="text-white/35 mb-3 text-xs uppercase flex items-center justify-center gap-2.5"
             style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.14em' }}
           >
+            <span style={{
+              width: 6, height: 6, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
+              background: 'rgba(255,86,107,0.85)',
+              boxShadow: '0 0 8px rgba(255,22,53,0.4)',
+              animation: 'pulseDot 2.4s ease-in-out infinite',
+            }} />
             Project: Tredstone
           </p>
           <h1
-            className="text-white font-space font-bold"
-            style={{ fontSize: '5rem', letterSpacing: '-0.03em', lineHeight: 1 }}
+            className="font-space font-bold block"
+            style={{
+              fontSize: 'clamp(4.5rem, 13vw, 10rem)',
+              fontWeight: 700,
+              letterSpacing: '-0.04em',
+              lineHeight: 0.9,
+              background: 'linear-gradient(135deg, #FF1635 0%, #A100FF 60%, #FF1673 100%)',
+              backgroundSize: '200% 200%',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              animation: 'gradientShift 6s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+            }}
           >
             RIVER
           </h1>
@@ -188,14 +222,20 @@ export function Signup() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full text-white py-3.5 px-4 rounded-lg font-space font-semibold text-sm active:scale-[0.97] mt-1 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pinky focus-visible:ring-offset-2"
+              className="w-full inline-flex items-center justify-center gap-2 font-space font-semibold disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pinky focus-visible:ring-offset-2 mt-1"
               style={{
-                background: '#FF1635',
-                boxShadow: '0 4px 20px rgba(255,22,53,0.35)',
-                transition: 'background 0.2s ease, transform 0.2s cubic-bezier(0.4,0,0.2,1)',
+                padding: '13px 26px',
+                background: 'linear-gradient(135deg, #FF1635, #FF1673)',
+                color: '#fff',
+                fontSize: 14,
+                letterSpacing: '-0.01em',
+                borderRadius: 8,
+                border: 'none',
+                boxShadow: '0 4px 22px rgba(255,22,53,0.32), 0 1px 4px rgba(255,22,53,0.14)',
+                transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, opacity 0.15s ease',
               }}
-              onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#e01030'; }}
-              onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = '#FF1635'; }}
+              onMouseEnter={(e) => { if (!loading) e.currentTarget.style.transform = 'scale(1.03)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
             >
               {loading ? 'Creating account...' : 'Create Account'}
             </button>
