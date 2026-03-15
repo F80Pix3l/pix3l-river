@@ -59,7 +59,7 @@ Return JSON in this exact format:
   }
 }`;
 }
-async function generateAndUploadThumbnail(videoId, platform, title) {
+async function generateAndUploadThumbnail(videoId, platform, title, retries = 3) {
     const config = THUMBNAIL_CONFIGS[platform];
     if (!config)
         return null;
@@ -100,6 +100,14 @@ async function generateAndUploadThumbnail(videoId, platform, title) {
         return signedUrlData?.signedUrl ?? null;
     }
     catch (err) {
+        const is429 = err instanceof Error && err.message.includes('429');
+        if (is429 && retries > 0) {
+            const retryAfter = err.message.match(/~?(\d+)s/)?.[1];
+            const delaySec = retryAfter ? parseInt(retryAfter) + 2 : 12;
+            console.log(`Thumbnail rate-limited for ${platform}, retrying in ${delaySec}s (${retries} retries left)`);
+            await new Promise(resolve => setTimeout(resolve, delaySec * 1000));
+            return generateAndUploadThumbnail(videoId, platform, title, retries - 1);
+        }
         console.error(`Thumbnail generation failed for ${platform}:`, err);
         return null;
     }
@@ -121,7 +129,7 @@ async function sendCompletionEmail(videoId) {
         const reviewUrl = `${appUrl}/review/${videoId}`;
         const title = video.title ?? 'Your video';
         await resend.emails.send({
-            from: 'RIVER <noreply@pix3l.com>',
+            from: 'RIVER <onboarding@resend.dev>',
             to: email,
             subject: `Your content is ready: ${title}`,
             html: `
@@ -231,8 +239,9 @@ async function processCopywriting(job) {
             }
         }
         console.log(`[${job.id}] Text content saved. Generating thumbnails...`);
-        // Generate thumbnails in parallel for all platforms
-        const thumbnailResults = await Promise.allSettled(platforms.map(async (content) => {
+        // Generate thumbnails sequentially to avoid Replicate burst rate limit
+        const thumbnailResults = [];
+        for (const content of platforms) {
             const thumbnailUrl = await generateAndUploadThumbnail(videoId, content.platform, content.title);
             if (thumbnailUrl) {
                 await supabase
@@ -242,9 +251,9 @@ async function processCopywriting(job) {
                     .eq('platform', content.platform);
                 console.log(`[${job.id}] Thumbnail uploaded for ${content.platform}`);
             }
-            return { platform: content.platform, thumbnailUrl };
-        }));
-        const thumbnailsSaved = thumbnailResults.filter((r) => r.status === 'fulfilled' && r.value.thumbnailUrl).length;
+            thumbnailResults.push({ platform: content.platform, thumbnailUrl });
+        }
+        const thumbnailsSaved = thumbnailResults.filter((r) => r.thumbnailUrl).length;
         console.log(`[${job.id}] ${thumbnailsSaved}/${platforms.length} thumbnails generated`);
         // Update pipeline status to done
         await supabase
@@ -297,6 +306,14 @@ worker.on('failed', (job, err) => {
     console.error(`Job ${job?.id} failed:`, err.message);
 });
 console.log('Copywriting worker started');
+console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? process.env.SUPABASE_URL : 'UNSET');
+// Connectivity test
+fetch(process.env.SUPABASE_URL + '/rest/v1/', {
+    headers: { apikey: process.env.SUPABASE_SERVICE_KEY }
+}).then(r => console.log('Supabase connectivity OK:', r.status))
+    .catch((e) => {
+    console.error('Supabase connectivity FAILED:', e.message, '| cause:', e.cause?.message ?? e.cause);
+});
 process.on('SIGTERM', async () => {
     console.log('Shutting down worker...');
     await worker.close();

@@ -22,6 +22,12 @@
   },
   "homepage": "https://github.com/F80Pix3l/pix3l-river#readme",
   "dependencies": {
-    "puppeteer": "^24.39.1"
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@supabase/supabase-js": "^2.99.1",
+    "bullmq": "^5.37.0",
+    "dotenv": "^16.5.0",
+    "puppeteer": "^24.39.1",
+    "replicate": "^1.0.4",
+    "resend": "^6.9.3"
   }
 }

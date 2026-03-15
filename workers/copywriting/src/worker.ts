@@ -96,7 +96,8 @@ Return JSON in this exact format:
 async function generateAndUploadThumbnail(
   videoId: string,
   platform: string,
-  title: string
+  title: string,
+  retries = 3
 ): Promise<string | null> {
   const config = THUMBNAIL_CONFIGS[platform];
   if (!config) return null;
@@ -144,6 +145,14 @@ async function generateAndUploadThumbnail(
 
     return signedUrlData?.signedUrl ?? null;
   } catch (err) {
+    const is429 = err instanceof Error && err.message.includes('429');
+    if (is429 && retries > 0) {
+      const retryAfter = err.message.match(/~?(\d+)s/)?.[1];
+      const delaySec = retryAfter ? parseInt(retryAfter) + 2 : 12;
+      console.log(`Thumbnail rate-limited for ${platform}, retrying in ${delaySec}s (${retries} retries left)`);
+      await new Promise(resolve => setTimeout(resolve, delaySec * 1000));
+      return generateAndUploadThumbnail(videoId, platform, title, retries - 1);
+    }
     console.error(`Thumbnail generation failed for ${platform}:`, err);
     return null;
   }
@@ -168,7 +177,7 @@ async function sendCompletionEmail(videoId: string): Promise<void> {
     const title = video.title ?? 'Your video';
 
     await resend.emails.send({
-      from: 'RIVER <noreply@pix3l.com>',
+      from: 'RIVER <onboarding@resend.dev>',
       to: email,
       subject: `Your content is ready: ${title}`,
       html: `
@@ -299,32 +308,29 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
 
     console.log(`[${job.id}] Text content saved. Generating thumbnails...`);
 
-    // Generate thumbnails in parallel for all platforms
-    const thumbnailResults = await Promise.allSettled(
-      platforms.map(async (content) => {
-        const thumbnailUrl = await generateAndUploadThumbnail(
-          videoId,
-          content.platform,
-          content.title
-        );
+    // Generate thumbnails sequentially to avoid Replicate burst rate limit
+    const thumbnailResults: { platform: string; thumbnailUrl: string | null }[] = [];
+    for (const content of platforms) {
+      const thumbnailUrl = await generateAndUploadThumbnail(
+        videoId,
+        content.platform,
+        content.title
+      );
 
-        if (thumbnailUrl) {
-          await supabase
-            .from('generated_content')
-            .update({ thumbnail_url: thumbnailUrl })
-            .eq('job_id', videoId)
-            .eq('platform', content.platform);
+      if (thumbnailUrl) {
+        await supabase
+          .from('generated_content')
+          .update({ thumbnail_url: thumbnailUrl })
+          .eq('job_id', videoId)
+          .eq('platform', content.platform);
 
-          console.log(`[${job.id}] Thumbnail uploaded for ${content.platform}`);
-        }
+        console.log(`[${job.id}] Thumbnail uploaded for ${content.platform}`);
+      }
 
-        return { platform: content.platform, thumbnailUrl };
-      })
-    );
+      thumbnailResults.push({ platform: content.platform, thumbnailUrl });
+    }
 
-    const thumbnailsSaved = thumbnailResults.filter(
-      (r) => r.status === 'fulfilled' && r.value.thumbnailUrl
-    ).length;
+    const thumbnailsSaved = thumbnailResults.filter((r) => r.thumbnailUrl).length;
 
     console.log(`[${job.id}] ${thumbnailsSaved}/${platforms.length} thumbnails generated`);
 
@@ -373,25 +379,54 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
   }
 }
 
-const worker = new Worker('copywriting', processCopywriting, {
-  connection: {
-    url: process.env.UPSTASH_REDIS_URL,
-  },
-  concurrency: 3,
-});
+console.log('Copywriting worker starting...');
+console.log('SUPABASE_URL:', process.env.SUPABASE_URL ?? 'UNSET');
 
-worker.on('completed', (job) => {
-  console.log(`Job ${job.id} completed successfully`);
-});
+async function startWorker() {
+  // Wait for Supabase to be reachable before accepting jobs
+  const maxAttempts = 5;
+  for (let i = 1; i <= maxAttempts; i++) {
+    try {
+      const res = await fetch(process.env.SUPABASE_URL! + '/rest/v1/', {
+        headers: { apikey: process.env.SUPABASE_SERVICE_KEY! },
+      });
+      console.log(`Supabase connectivity OK: ${res.status}`);
+      break;
+    } catch (e: any) {
+      console.error(`Supabase connectivity check ${i}/${maxAttempts} failed:`, e.message, '| cause:', e.cause?.message ?? e.cause);
+      if (i === maxAttempts) {
+        console.error('Supabase unreachable after all attempts, exiting');
+        process.exit(1);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 3000 * i));
+    }
+  }
 
-worker.on('failed', (job, err) => {
-  console.error(`Job ${job?.id} failed:`, err.message);
-});
+  const worker = new Worker('copywriting', processCopywriting, {
+    connection: {
+      url: process.env.UPSTASH_REDIS_URL,
+    },
+    concurrency: 3,
+  });
 
-console.log('Copywriting worker started');
+  worker.on('completed', (job) => {
+    console.log(`Job ${job.id} completed successfully`);
+  });
 
-process.on('SIGTERM', async () => {
-  console.log('Shutting down worker...');
-  await worker.close();
-  process.exit(0);
+  worker.on('failed', (job, err) => {
+    console.error(`Job ${job?.id} failed:`, err.message);
+  });
+
+  process.on('SIGTERM', async () => {
+    console.log('Shutting down worker...');
+    await worker.close();
+    process.exit(0);
+  });
+
+  console.log('Copywriting worker ready');
+}
+
+startWorker().catch((err) => {
+  console.error('Worker failed to start:', err);
+  process.exit(1);
 });
