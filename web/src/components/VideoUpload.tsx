@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { GlowingEffect } from './ui/glowing-effect';
 
 const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
@@ -102,7 +103,7 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
     <div>
       {/* Drop Zone */}
       <div
-        className="p-12 text-center"
+        className="p-12 text-center relative"
         onDrop={handleDrop}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
@@ -115,6 +116,7 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
           transition: 'border-color 0.3s ease, background-color 0.3s ease',
         }}
       >
+        <GlowingEffect disabled={false} borderWidth={4} />
         <input
           ref={fileInputRef}
           type="file"
