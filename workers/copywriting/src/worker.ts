@@ -1,9 +1,15 @@
-import { Worker, Job } from 'bullmq';
+import { Worker, Job, Queue } from 'bullmq';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import Replicate from 'replicate';
 import { Resend } from 'resend';
 import 'dotenv/config';
+
+const brandVoiceQueue = new Queue('brand-voice', {
+  connection: {
+    url: process.env.UPSTASH_REDIS_URL,
+  },
+});
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -352,6 +358,19 @@ async function processCopywriting(job: Job<CopywritingJobData>) {
       .eq('id', videoId);
 
     await sendCompletionEmail(videoId);
+
+    // Enqueue brand voice job
+    await brandVoiceQueue.add(
+      'apply-brand-voice',
+      { videoId },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: { count: 100 },
+        removeOnFail: { count: 500 },
+      }
+    );
+    console.log(`[${job.id}] Enqueued brand-voice job for video ${videoId}`);
 
     console.log(`[${job.id}] Copywriting completed for video ${videoId}`);
 

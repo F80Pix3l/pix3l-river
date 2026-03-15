@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
+import { BrandVoice } from './pages/BrandVoice';
 import { Dashboard } from './components/Dashboard';
 import { Pipeline } from './components/Pipeline';
 import { Review } from './components/Review';
@@ -60,6 +61,14 @@ function AppContent() {
         element={
           <ProtectedRoute>
             <Review />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/brand-voice"
+        element={
+          <ProtectedRoute>
+            <BrandVoice />
           </ProtectedRoute>
         }
       />

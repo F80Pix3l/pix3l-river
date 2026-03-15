@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Layout } from './Layout';
 
 type Platform = 'youtube' | 'tiktok' | 'instagram';
+type ViewMode = 'original' | 'brand-voice';
 
 interface PlatformContent {
   platform: Platform;
@@ -27,14 +28,19 @@ const emptyContent = (platform: Platform): PlatformContent => ({
   platform, title: '', description: '', hashtags: [], thumbnailUrl: '', scheduledTime: '', status: 'pending',
 });
 
+const emptyMap = () => ({
+  youtube: emptyContent('youtube'),
+  tiktok: emptyContent('tiktok'),
+  instagram: emptyContent('instagram'),
+});
+
 export function Review() {
   const { jobId } = useParams<{ jobId: string }>();
   const [activePlatform, setActivePlatform] = useState<Platform>('youtube');
-  const [contentByPlatform, setContentByPlatform] = useState<Record<Platform, PlatformContent>>({
-    youtube: emptyContent('youtube'),
-    tiktok: emptyContent('tiktok'),
-    instagram: emptyContent('instagram'),
-  });
+  const [viewMode, setViewMode] = useState<ViewMode>('original');
+  const [originalContent, setOriginalContent] = useState<Record<Platform, PlatformContent>>(emptyMap());
+  const [brandVoiceContent, setBrandVoiceContent] = useState<Record<Platform, PlatformContent>>(emptyMap());
+  const [hasBrandVoice, setHasBrandVoice] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -48,11 +54,16 @@ export function Review() {
     if (!jobId) return;
     const fetchContent = async () => {
       try {
-        const { data, error } = await supabase.from('generated_content').select('*').eq('job_id', jobId);
-        if (error) throw error;
-        if (data && data.length > 0) {
-          const map = { ...contentByPlatform };
-          data.forEach((item: any) => {
+        const [originalRes, brandVoiceRes] = await Promise.all([
+          supabase.from('generated_content').select('*').eq('job_id', jobId),
+          supabase.from('brand_voice_content').select('*').eq('job_id', jobId),
+        ]);
+
+        if (originalRes.error) throw originalRes.error;
+
+        if (originalRes.data && originalRes.data.length > 0) {
+          const map = emptyMap();
+          originalRes.data.forEach((item: any) => {
             if (item.platform in map) {
               map[item.platform as Platform] = {
                 platform: item.platform,
@@ -65,7 +76,26 @@ export function Review() {
               };
             }
           });
-          setContentByPlatform(map);
+          setOriginalContent(map);
+        }
+
+        if (brandVoiceRes.data && brandVoiceRes.data.length > 0) {
+          setHasBrandVoice(true);
+          const map = emptyMap();
+          brandVoiceRes.data.forEach((item: any) => {
+            if (item.platform in map) {
+              map[item.platform as Platform] = {
+                platform: item.platform,
+                title: item.title || '',
+                description: item.description || '',
+                hashtags: item.hashtags || [],
+                thumbnailUrl: '', // brand voice shares original thumbnail
+                scheduledTime: '',
+                status: item.status || 'pending',
+              };
+            }
+          });
+          setBrandVoiceContent(map);
         }
       } catch (err) {
         console.error('Error fetching content:', err);
@@ -76,13 +106,27 @@ export function Review() {
     fetchContent();
   }, [jobId]);
 
-  const activeContent = contentByPlatform[activePlatform];
+  const activeContent = viewMode === 'original'
+    ? originalContent[activePlatform]
+    : brandVoiceContent[activePlatform];
+
+  const thumbnailUrl = originalContent[activePlatform].thumbnailUrl;
+
+  const setActiveContent = (updater: (prev: PlatformContent) => PlatformContent) => {
+    if (viewMode === 'original') {
+      setOriginalContent((prev) => ({ ...prev, [activePlatform]: updater(prev[activePlatform]) }));
+    } else {
+      setBrandVoiceContent((prev) => ({ ...prev, [activePlatform]: updater(prev[activePlatform]) }));
+    }
+  };
+
+  const activeTable = viewMode === 'original' ? 'generated_content' : 'brand_voice_content';
 
   const handleApprove = async () => {
     try {
-      await supabase.from('generated_content').update({ status: 'approved' })
+      await supabase.from(activeTable).update({ status: 'approved' })
         .eq('job_id', jobId).eq('platform', activePlatform);
-      setContentByPlatform((prev) => ({ ...prev, [activePlatform]: { ...prev[activePlatform], status: 'approved' } }));
+      setActiveContent((prev) => ({ ...prev, status: 'approved' }));
       showToast(`${platformConfig[activePlatform].label} content approved.`);
     } catch {
       showToast('Failed to approve content.', 'error');
@@ -91,9 +135,9 @@ export function Review() {
 
   const handleReject = async () => {
     try {
-      await supabase.from('generated_content').update({ status: 'rejected' })
+      await supabase.from(activeTable).update({ status: 'rejected' })
         .eq('job_id', jobId).eq('platform', activePlatform);
-      setContentByPlatform((prev) => ({ ...prev, [activePlatform]: { ...prev[activePlatform], status: 'rejected' } }));
+      setActiveContent((prev) => ({ ...prev, status: 'rejected' }));
       showToast(`${platformConfig[activePlatform].label} content rejected.`);
     } catch {
       showToast('Failed to reject content.', 'error');
@@ -102,13 +146,13 @@ export function Review() {
 
   const handleSaveEdit = async () => {
     try {
-      await supabase.from('generated_content').update({
+      await supabase.from(activeTable).update({
         title: activeContent.title,
         description: activeContent.description,
         hashtags: activeContent.hashtags,
         status: 'edited',
       }).eq('job_id', jobId).eq('platform', activePlatform);
-      setContentByPlatform((prev) => ({ ...prev, [activePlatform]: { ...prev[activePlatform], status: 'edited' } }));
+      setActiveContent((prev) => ({ ...prev, status: 'edited' }));
       setIsEditing(false);
       showToast('Changes saved.');
     } catch {
@@ -162,39 +206,79 @@ export function Review() {
           Job · {jobId}
         </p>
 
-        {/* Platform tabs */}
-        <div className="flex gap-1 mb-8 p-1 rounded-lg w-fit" style={{ background: 'rgba(0,9,71,0.5)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          {PLATFORMS.map((platform) => {
-            const cfg = platformConfig[platform];
-            const isActive = activePlatform === platform;
-            const content = contentByPlatform[platform];
-            return (
-              <button
-                key={platform}
-                onClick={() => { setActivePlatform(platform); setIsEditing(false); }}
-                className="px-4 py-2 rounded-md text-sm font-space font-semibold transition-[background-color,color,border-color] duration-200 motion-reduce:transition-none flex items-center gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-2"
-                style={{
-                  background: isActive ? 'rgba(255,255,255,0.06)' : 'transparent',
-                  color: isActive ? cfg.color : 'rgba(255,255,255,0.40)',
-                  borderBottom: isActive ? `2px solid ${cfg.activeBorder}` : '2px solid transparent',
-                }}
-              >
-                {cfg.label}
-                {content.status === 'approved' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-vista-blue inline-block" />
-                )}
-                {content.status === 'rejected' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-big-red inline-block" />
-                )}
-              </button>
-            );
-          })}
+        {/* Platform tabs + Brand Voice toggle row */}
+        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+          <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: 'rgba(0,9,71,0.5)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            {PLATFORMS.map((platform) => {
+              const cfg = platformConfig[platform];
+              const isActive = activePlatform === platform;
+              const content = viewMode === 'original' ? originalContent[platform] : brandVoiceContent[platform];
+              return (
+                <button
+                  key={platform}
+                  onClick={() => { setActivePlatform(platform); setIsEditing(false); }}
+                  className="px-4 py-2 rounded-md text-sm font-space font-semibold transition-[background-color,color,border-color] duration-200 motion-reduce:transition-none flex items-center gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-2"
+                  style={{
+                    background: isActive ? 'rgba(255,255,255,0.06)' : 'transparent',
+                    color: isActive ? cfg.color : 'rgba(255,255,255,0.40)',
+                    borderBottom: isActive ? `2px solid ${cfg.activeBorder}` : '2px solid transparent',
+                  }}
+                >
+                  {cfg.label}
+                  {content.status === 'approved' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-vista-blue inline-block" />
+                  )}
+                  {content.status === 'rejected' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-big-red inline-block" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Brand Voice toggle — only shown when brand voice content exists */}
+          {hasBrandVoice && (
+            <div
+              className="flex gap-0.5 p-1 rounded-lg"
+              style={{ background: 'rgba(0,9,71,0.5)', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              {(['original', 'brand-voice'] as ViewMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => { setViewMode(mode); setIsEditing(false); }}
+                  className="px-3 py-1.5 rounded-md text-xs font-space font-semibold transition-[background-color,color] duration-200 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF1673] focus-visible:outline-offset-2"
+                  style={{
+                    background: viewMode === mode ? 'rgba(255,255,255,0.08)' : 'transparent',
+                    color: viewMode === mode ? '#fff' : 'rgba(255,255,255,0.40)',
+                  }}
+                >
+                  {mode === 'original' ? 'Original' : 'Brand Voice'}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Brand Voice mode indicator */}
+        {viewMode === 'brand-voice' && (
+          <div
+            className="mb-5 px-4 py-2.5 rounded-lg flex items-center gap-2.5"
+            style={{ background: 'rgba(133,153,255,0.06)', border: '1px solid rgba(133,153,255,0.15)' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8599FF" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+            <p className="text-xs text-vista-blue" style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.06em' }}>
+              Viewing brand voice version
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Content panel */}
           <div className="lg:col-span-2 space-y-5">
-            {/* Thumbnail */}
+            {/* Thumbnail — always from original */}
             <div className="p-5" style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'hidden' }}>
               <p
                 className="text-white/35 text-xs uppercase mb-3"
@@ -206,8 +290,8 @@ export function Review() {
                 className="aspect-video rounded-lg flex items-center justify-center overflow-hidden"
                 style={{ background: 'rgba(0,6,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}
               >
-                {activeContent.thumbnailUrl ? (
-                  <img src={activeContent.thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
+                {thumbnailUrl ? (
+                  <img src={thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
                 ) : (
                   <p className="text-white/25 text-sm">No thumbnail available</p>
                 )}
@@ -235,7 +319,7 @@ export function Review() {
                     <input
                       type="text"
                       value={activeContent.title}
-                      onChange={(e) => setContentByPlatform((p) => ({ ...p, [activePlatform]: { ...p[activePlatform], title: e.target.value } }))}
+                      onChange={(e) => setActiveContent((p) => ({ ...p, title: e.target.value }))}
                       className="w-full px-4 py-2.5 rounded-lg text-white text-sm focus:outline-none transition-colors duration-200"
                       style={inputStyle}
                       onFocus={(e) => (e.currentTarget.style.borderColor = 'rgba(255,22,115,0.5)')}
@@ -256,7 +340,7 @@ export function Review() {
                   {isEditing ? (
                     <textarea
                       value={activeContent.description}
-                      onChange={(e) => setContentByPlatform((p) => ({ ...p, [activePlatform]: { ...p[activePlatform], description: e.target.value } }))}
+                      onChange={(e) => setActiveContent((p) => ({ ...p, description: e.target.value }))}
                       rows={6}
                       className="w-full px-4 py-2.5 rounded-lg text-white text-sm focus:outline-none transition-colors duration-200 resize-none"
                       style={inputStyle}
@@ -285,7 +369,7 @@ export function Review() {
                             .split(/[\s,]+/)
                             .map((t) => t.replace(/^#/, '').trim())
                             .filter((t) => t.length > 0);
-                          setContentByPlatform((p) => ({ ...p, [activePlatform]: { ...p[activePlatform], hashtags: tags } }));
+                          setActiveContent((p) => ({ ...p, hashtags: tags }));
                         }}
                         className="w-full px-4 py-2.5 rounded-lg text-white text-sm focus:outline-none transition-colors duration-200"
                         style={inputStyle}

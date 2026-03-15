@@ -31,10 +31,18 @@ const ReviewIcon = () => (
   </svg>
 );
 
+const BrandVoiceIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+  </svg>
+);
+
 const BASE_NAV = [
   { id: 'upload', label: 'Upload', icon: <UploadIcon /> },
   { id: 'pipeline', label: 'Pipeline', icon: <PipelineIcon /> },
   { id: 'review', label: 'Review', icon: <ReviewIcon /> },
+  { id: 'brand-voice', label: 'Brand Voice', icon: <BrandVoiceIcon /> },
 ];
 
 export function Layout({ children, pageTitle }: LayoutProps) {
@@ -47,12 +55,15 @@ export function Layout({ children, pageTitle }: LayoutProps) {
     ? 'pipeline'
     : location.pathname.startsWith('/review')
     ? 'review'
+    : location.pathname.startsWith('/brand-voice')
+    ? 'brand-voice'
     : 'upload';
 
   const navItems = BASE_NAV.map((item) => {
     if (item.id === 'upload') return { ...item, href: '/upload', disabled: false };
     if (item.id === 'pipeline') return { ...item, href: jobId ? `/pipeline/${jobId}` : null, disabled: !jobId };
     if (item.id === 'review') return { ...item, href: jobId ? `/review/${jobId}` : null, disabled: !jobId };
+    if (item.id === 'brand-voice') return { ...item, href: '/brand-voice', disabled: false };
     return { ...item, href: null, disabled: true };
   });
 
