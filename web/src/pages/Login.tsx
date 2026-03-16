@@ -194,6 +194,13 @@ export function Login() {
             </Link>
           </p>
         </div>
+        <a
+          href="https://pix3l.co"
+          className="mt-6 flex items-center justify-center gap-2 text-white/30 hover:text-white/55 transition-colors duration-200"
+          style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', textDecoration: 'none' }}
+        >
+          ← Back to Pix3l
+        </a>
       </div>
     </div>
   );
