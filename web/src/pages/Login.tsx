@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { GlowingEffect } from '../components/ui/glowing-effect';
+import { GlowCard } from '../components/GlowCard';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -91,18 +91,12 @@ export function Login() {
         </div>
 
         {/* Card */}
-        <div
-          className="p-8 relative"
-          style={{
-            border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: 12,
-            background: 'rgba(0,9,71,0.55)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.45), 0 2px 10px rgba(0,0,0,0.25)',
-          }}
+        <GlowCard
+          bg="rgba(0,9,71,0.55)"
+          innerClassName="p-8"
+          innerStyle={{ backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}
+          style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.45), 0 2px 10px rgba(0,0,0,0.25)' }}
         >
-          <GlowingEffect disabled={false} borderWidth={4} />
           <h2 className="text-2xl font-space font-bold text-white mb-6" style={{ letterSpacing: '-0.02em' }}>
             Sign in
           </h2>
@@ -193,7 +187,7 @@ export function Login() {
               Create account
             </Link>
           </p>
-        </div>
+        </GlowCard>
         <a
           href="https://pix3l.co"
           className="mt-6 flex items-center justify-center gap-2 text-white/30 hover:text-white/55 transition-colors duration-200"

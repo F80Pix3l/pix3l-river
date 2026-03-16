@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { VideoUpload } from './VideoUpload';
 import { Layout } from './Layout';
-import { GlowingEffect } from './ui/glowing-effect';
+import { GlowCard } from './GlowCard';
 
 interface Video {
   id: string;
@@ -115,18 +115,13 @@ export function Dashboard() {
               Loading...
             </div>
           ) : videos.length === 0 ? (
-            <div className="relative" style={{ borderRadius: 12 }}>
-              <GlowingEffect disabled={false} borderWidth={4} />
-              <div className="py-12 text-center" style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'hidden' }}>
-                <p className="text-white/35 text-sm" style={{ fontFamily: '"Inter", sans-serif' }}>
-                  No videos yet. Upload your first video above.
-                </p>
-              </div>
-            </div>
+            <GlowCard bg="rgba(0,9,71,0.3)" innerClassName="py-12 text-center">
+              <p className="text-white/35 text-sm" style={{ fontFamily: '"Inter", sans-serif' }}>
+                No videos yet. Upload your first video above.
+              </p>
+            </GlowCard>
           ) : (
-            <div className="relative" style={{ borderRadius: 12 }}>
-              <GlowingEffect disabled={false} borderWidth={4} />
-              <div style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'hidden' }}>
+            <GlowCard bg="rgba(0,9,71,0.3)">
               <ul className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
                 {videos.map((video) => {
                   const cfg = statusConfig[video.status];
@@ -239,8 +234,7 @@ export function Dashboard() {
                   );
                 })}
               </ul>
-            </div>
-            </div>
+            </GlowCard>
           )}
         </div>
       </div>

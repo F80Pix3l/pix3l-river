@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Layout } from './Layout';
-import { GlowingEffect } from './ui/glowing-effect';
+import { GlowCard } from './GlowCard';
 
 type Platform = 'youtube' | 'tiktok' | 'instagram';
 type ViewMode = 'original' | 'brand-voice';
@@ -280,9 +280,7 @@ export function Review() {
           {/* Content panel */}
           <div className="lg:col-span-2 space-y-5">
             {/* Thumbnail — always from original */}
-            <div className="relative" style={{ borderRadius: 12 }}>
-              <GlowingEffect disabled={false} borderWidth={4} />
-            <div className="p-5" style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'hidden' }}>
+            <GlowCard bg="rgba(0,9,71,0.3)" innerClassName="p-5">
               <p
                 className="text-white/35 text-xs uppercase mb-3"
                 style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.10em' }}
@@ -299,13 +297,10 @@ export function Review() {
                   <p className="text-white/25 text-sm">No thumbnail available</p>
                 )}
               </div>
-            </div>
-            </div>
+            </GlowCard>
 
             {/* Content */}
-            <div className="relative" style={{ borderRadius: 12 }}>
-              <GlowingEffect disabled={false} borderWidth={4} />
-            <div className="p-5" style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'hidden' }}>
+            <GlowCard bg="rgba(0,9,71,0.3)" innerClassName="p-5">
               <p
                 className="text-white/35 text-xs uppercase mb-4"
                 style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.10em' }}
@@ -406,8 +401,7 @@ export function Review() {
                   )}
                 </div>
               </div>
-            </div>
-            </div>
+            </GlowCard>
 
             {/* AI Disclosure */}
             <div
@@ -425,8 +419,12 @@ export function Review() {
 
           {/* Actions panel */}
           <div className="lg:col-span-1">
-            <div className="sticky top-6 p-5 relative" style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, background: 'rgba(0,9,71,0.3)', overflow: 'visible' }}>
-              <GlowingEffect disabled={false} borderWidth={4} />
+            <GlowCard
+              bg="rgba(0,9,71,0.3)"
+              innerClassName="p-5"
+              innerStyle={{ overflow: 'visible' }}
+              style={{ position: 'sticky', top: '1.5rem' }}
+            >
               <p
                 className="text-white/35 text-xs uppercase mb-4"
                 style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.10em' }}
@@ -521,7 +519,7 @@ export function Review() {
                   </>
                 )}
               </div>
-            </div>
+            </GlowCard>
           </div>
         </div>
       </div>

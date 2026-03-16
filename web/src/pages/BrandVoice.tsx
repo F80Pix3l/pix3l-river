@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Layout } from '../components/Layout';
+import { GlowCard } from '../components/GlowCard';
 
 interface BrandVoiceProfile {
   tone: string;
@@ -134,6 +135,7 @@ export function BrandVoice() {
           Define your brand voice once. RIVER uses it to rewrite all generated content to sound like you.
         </p>
 
+        <GlowCard bg="rgba(0,9,71,0.3)" innerClassName="p-8">
         <form onSubmit={handleSave} className="space-y-6">
           {/* Tone */}
           <div>
@@ -229,6 +231,7 @@ export function BrandVoice() {
             {saving ? 'Saving...' : 'Save Brand Voice'}
           </button>
         </form>
+        </GlowCard>
       </div>
     </Layout>
   );

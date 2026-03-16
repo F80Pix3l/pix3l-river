@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { GlowingEffect } from './ui/glowing-effect';
+import { GlowCard } from './GlowCard';
 
 const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
@@ -102,21 +102,21 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
   return (
     <div>
       {/* Drop Zone */}
-      <div
-        className="p-12 text-center relative"
-        onDrop={handleDrop}
-        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-        onDragLeave={() => setIsDragging(false)}
-        style={{
-          borderRadius: 12,
-          opacity: uploading ? 0.6 : 1,
-          pointerEvents: uploading ? 'none' : 'auto',
+      <GlowCard
+        bg={isDragging ? 'rgba(133,153,255,0.05)' : 'rgba(0,9,71,0.3)'}
+        innerClassName="p-12 text-center"
+        innerStyle={{
           border: isDragging ? '2px dashed rgba(133,153,255,0.7)' : '2px dashed rgba(133,153,255,0.25)',
-          background: isDragging ? 'rgba(133,153,255,0.05)' : 'rgba(0,9,71,0.3)',
           transition: 'border-color 0.3s ease, background-color 0.3s ease',
         }}
+        onDrop={handleDrop}
+        onDragOver={(e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        style={{
+          opacity: uploading ? 0.6 : 1,
+          pointerEvents: uploading ? 'none' : 'auto',
+        }}
       >
-        <GlowingEffect disabled={false} borderWidth={4} />
         <input
           ref={fileInputRef}
           type="file"
@@ -196,7 +196,7 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
             </p>
           </>
         )}
-      </div>
+      </GlowCard>
 
       {error && (
         <div
