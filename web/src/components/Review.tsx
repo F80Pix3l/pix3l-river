@@ -280,7 +280,7 @@ export function Review() {
           {/* Content panel */}
           <div className="lg:col-span-2 space-y-5">
             {/* Thumbnail — always from original */}
-            <GlowCard bg="rgba(0,9,71,0.3)" innerClassName="p-5">
+            <GlowCard bg="#000947" innerClassName="p-5">
               <p
                 className="text-white/35 text-xs uppercase mb-3"
                 style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.10em' }}
@@ -300,7 +300,7 @@ export function Review() {
             </GlowCard>
 
             {/* Content */}
-            <GlowCard bg="rgba(0,9,71,0.3)" innerClassName="p-5">
+            <GlowCard bg="#000947" innerClassName="p-5">
               <p
                 className="text-white/35 text-xs uppercase mb-4"
                 style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.10em' }}
@@ -420,7 +420,7 @@ export function Review() {
           {/* Actions panel */}
           <div className="lg:col-span-1">
             <GlowCard
-              bg="rgba(0,9,71,0.3)"
+              bg="#000947"
               innerClassName="p-5"
               innerStyle={{ overflow: 'visible' }}
               style={{ position: 'sticky', top: '1.5rem' }}

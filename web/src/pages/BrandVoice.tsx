@@ -135,7 +135,7 @@ export function BrandVoice() {
           Define your brand voice once. RIVER uses it to rewrite all generated content to sound like you.
         </p>
 
-        <GlowCard bg="rgba(0,9,71,0.3)" innerClassName="p-8">
+        <GlowCard bg="#000947" innerClassName="p-8">
         <form onSubmit={handleSave} className="space-y-6">
           {/* Tone */}
           <div>

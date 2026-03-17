@@ -115,13 +115,13 @@ export function Dashboard() {
               Loading...
             </div>
           ) : videos.length === 0 ? (
-            <GlowCard bg="rgba(0,9,71,0.3)" innerClassName="py-12 text-center">
+            <GlowCard bg="#000947" innerClassName="py-12 text-center">
               <p className="text-white/35 text-sm" style={{ fontFamily: '"Inter", sans-serif' }}>
                 No videos yet. Upload your first video above.
               </p>
             </GlowCard>
           ) : (
-            <GlowCard bg="rgba(0,9,71,0.3)">
+            <GlowCard bg="#000947">
               <ul className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
                 {videos.map((video) => {
                   const cfg = statusConfig[video.status];

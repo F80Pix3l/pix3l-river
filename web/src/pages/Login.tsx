@@ -92,7 +92,7 @@ export function Login() {
 
         {/* Card */}
         <GlowCard
-          bg="rgba(0,9,71,0.55)"
+          bg="#000a3a"
           innerClassName="p-8"
           innerStyle={{ backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}
           style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.45), 0 2px 10px rgba(0,0,0,0.25)' }}

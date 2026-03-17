@@ -19,7 +19,7 @@ interface GlowCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'style'> {
   innerClassName?: string;
   /** Styles applied to the inner content div */
   innerStyle?: CSSProperties;
-  /** Background of the inner card surface. Defaults to rgba(0,9,71,0.3) */
+  /** Background of the inner card surface. Must be opaque to prevent glow bleed. Defaults to #000947 */
   bg?: string;
 }
 
@@ -29,7 +29,7 @@ interface GlowCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'style'> {
  * The inner div carries the actual card background and content.
  *
  * Usage:
- *   <GlowCard innerClassName="p-6" bg="rgba(0,9,71,0.3)">...</GlowCard>
+ *   <GlowCard innerClassName="p-6" bg="#000947">...</GlowCard>
  */
 export function GlowCard({
   children,
@@ -37,7 +37,7 @@ export function GlowCard({
   style,
   innerClassName = '',
   innerStyle,
-  bg = 'rgba(0,9,71,0.3)',
+  bg = '#000947',
   onMouseMove: callerMouseMove,
   onMouseEnter: callerMouseEnter,
   onMouseLeave: callerMouseLeave,

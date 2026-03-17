@@ -103,7 +103,7 @@ export function VideoUpload({ onUploadComplete }: { onUploadComplete?: (videoId:
     <div>
       {/* Drop Zone */}
       <GlowCard
-        bg={isDragging ? 'rgba(133,153,255,0.05)' : 'rgba(0,9,71,0.3)'}
+        bg={isDragging ? '#000d4a' : '#000947'}
         innerClassName="p-12 text-center"
         innerStyle={{
           border: isDragging ? '2px dashed rgba(133,153,255,0.7)' : '2px dashed rgba(133,153,255,0.25)',

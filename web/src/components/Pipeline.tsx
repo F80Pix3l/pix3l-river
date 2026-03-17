@@ -186,7 +186,7 @@ export function Pipeline() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Agent list */}
           <div className="lg:col-span-1">
-            <GlowCard bg="rgba(0,9,71,0.3)">
+            <GlowCard bg="#000947">
               <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <p
                   className="text-white/40 text-xs uppercase"
@@ -313,7 +313,7 @@ export function Pipeline() {
 
           {/* Detail panel */}
           <div className="lg:col-span-2">
-            <GlowCard bg="rgba(0,9,71,0.3)" innerClassName="p-6 h-full">
+            <GlowCard bg="#000947" innerClassName="p-6 h-full">
               {activeAgent && (
                 <>
                   <div className="mb-6">
